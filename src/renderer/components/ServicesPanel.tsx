@@ -268,7 +268,19 @@ function ServiceCard({
 }) {
   const up = service.reachable === true;
   const down = service.reachable === false;
-  const hasInstall = Boolean(service.workingDir?.trim()) || Boolean(service.usePath);
+  const hasFolder = Boolean(service.workingDir?.trim());
+  const hasLaunch = hasFolder || Boolean(service.usePath);
+  // Chatterbox Start needs the portable tree; PATH alone cannot launch it.
+  const canStart =
+    service.kind === 'chatterbox'
+      ? hasFolder
+      : hasLaunch &&
+        !service.actions.some(
+          (a) =>
+            (a.id.toLowerCase() === 'start' || a.label.toLowerCase() === 'start') &&
+            a.runner.type === 'shell' &&
+            /^\s*echo\b/i.test(a.runner.command)
+        );
 
   const visibleActions = service.actions.filter((action) => {
     const id = action.id.toLowerCase();
@@ -276,17 +288,17 @@ function ServiceCard({
     const isStart = id === 'start' || label === 'start';
     const isStop = id === 'stop' || label === 'stop';
     if (isStart) {
-      if (!hasInstall) return false;
+      if (!canStart) return false;
       if (up) return false;
       return true;
     }
     if (isStop) {
-      // Port kill does not need an install folder — only that the service is up.
+      // Port kill does not need a launch folder — only that the service is up.
       if (down) return false;
       if (up) return true;
-      return hasInstall;
+      return hasLaunch;
     }
-    return hasInstall;
+    return hasLaunch;
   });
 
   const installMode: 'path' | 'folder' | 'unset' = service.usePath
@@ -383,6 +395,20 @@ function ServiceCard({
           the service is reachable.
         </p>
       )}
+      {installMode === 'path' && service.kind === 'chatterbox' && (
+        <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+          Chatterbox Start needs the portable launch folder (python_embedded + start.py). Choose
+          folder to enable Start; Stop still works when it is reachable.
+        </p>
+      )}
+      {hasLaunch &&
+        !canStart &&
+        service.kind === 'generic' &&
+        service.reachable !== true && (
+          <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+            Start is a placeholder until you set a real shell command for this service.
+          </p>
+        )}
       <div className="btn-row">
         {visibleActions.map((action) => (
           <div key={action.id} className="action-with-cmd">
@@ -397,7 +423,7 @@ function ServiceCard({
             <code className="cmd-preview">{action.commandPreview}</code>
           </div>
         ))}
-        {service.kind === 'ollama' && hasInstall && up && (
+        {service.kind === 'ollama' && hasLaunch && up && (
           <button
             type="button"
             className="btn"

@@ -91,12 +91,12 @@ export const SERVICE_PRESETS: ServicePreset[] = [
           label: 'Start',
           commandPreview: workingDir
             ? `(run your ComfyUI start command in ${workingDir})`
-            : 'Set working dir + Start command after adding',
+            : 'Set a launch folder and Start command after adding',
           runner: {
             type: 'shell',
             command: workingDir
               ? 'echo Configure the Start command for this ComfyUI install'
-              : 'echo Set a working directory and Start command',
+              : 'echo Set a launch folder and Start command',
             cwd: workingDir ?? undefined,
           },
         },
