@@ -4,7 +4,7 @@ This app's own backlog — not a KVG_Standards compliance checklist (see [KVG_St
 
 ## Features
 
-- Source logo at `assets/logo.png` and wire `generate-icons.js` with sharp
+-
 
 ## Fixes
 

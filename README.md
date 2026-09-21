@@ -4,16 +4,13 @@
 
 Local dashboard for **Ollama**, **Chatterbox TTS**, and **NVIDIA GPU** status on this machine. Hardpoint starts and stops configured install folders, lists models loaded in Ollama VRAM, and exposes a loopback HTTP API for embeds.
 
-This repo follows the shared conventions in [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards) (theming, release/CI, update-check, licensing) — see that repo for the rules this one is expected to keep up with.
-
-## Known gap
-
-No `assets/logo.png` source mark exists yet, so `scripts/generate-icons.js` is wired but inert, and in-app logo `<img>` tags hide on load failure rather than showing a broken image.
+This repo follows the shared conventions in [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards) (theming, release/CI, update-check, licensing, logo/branding) — see that repo for the rules this one is expected to keep up with.
 
 ## Development
 
 ```
 npm install
+npm run generate-icons   # after changing assets/logo.png
 npm run dev
 ```
 

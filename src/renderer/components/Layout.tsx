@@ -12,7 +12,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <img
             className="app-logo"
             src="./logo.png"
-            alt=""
+            alt="Hardpoint"
             onError={() => setLogoHidden(true)}
           />
         )}

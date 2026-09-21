@@ -4,3 +4,4 @@ Auto Release (`.github/workflows/auto-release.yml`) always does at least a patch
 
 - 2026-09-20 — created this file
 - 2026-09-21 — frame-ancestors * so packaged RolePlaymate/KVGenius can iframe the UI
+- 2026-09-21 — source logo + generated icons (KVG_Standards branding checklist)
