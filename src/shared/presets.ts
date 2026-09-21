@@ -39,7 +39,7 @@ export const SERVICE_PRESETS: ServicePreset[] = [
       {
         id: 'start',
         label: 'Start',
-        commandPreview: 'shell.openPath(ollama.exe)  OR  ollama serve',
+        commandPreview: 'install folder ollama.exe, or `ollama` on PATH (`ollama serve`)',
         runner: { type: 'builtin', builtin: 'ollama-start' },
       },
       {

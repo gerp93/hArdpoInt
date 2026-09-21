@@ -152,76 +152,88 @@ export function Dashboard() {
       )}
       {error && <p className="banner banner-error">{error}</p>}
 
-      <section className="card">
-        <h2>GPU</h2>
-        {!gpu?.available ? (
-          <p className="muted">No NVIDIA GPU data (nvidia-smi not available).</p>
-        ) : (
-          <>
-            <p className="card-meta">{gpu.name}</p>
-            <div className="vram-row">
-              <span>VRAM</span>
-              <span>
-                {formatMiB(gpu.memoryUsedMiB)} / {formatMiB(gpu.memoryTotalMiB)}
-              </span>
-            </div>
-            <div className="progress-bar" aria-hidden={vramPct == null}>
-              <div className="progress-fill" style={{ width: vramPct != null ? `${vramPct}%` : '0%' }} />
-            </div>
-            <div className="stat-grid">
-              <div>
-                <span className="stat-label">Utilization</span>
-                <span className="stat-value">
-                  {gpu.utilizationGpu != null ? `${gpu.utilizationGpu}%` : '—'}
-                </span>
-              </div>
-              <div>
-                <span className="stat-label">Temperature</span>
-                <span className="stat-value">
-                  {gpu.temperatureC != null ? `${gpu.temperatureC}°C` : '—'}
-                </span>
-              </div>
-            </div>
-            <GpuProcessTabs processes={gpu.processes} />
-          </>
-        )}
-      </section>
+      <div className="dashboard-columns">
+        <div className="dashboard-col dashboard-col-system">
+          <section className="card">
+            <h2>GPU</h2>
+            {!gpu?.available ? (
+              <p className="muted">No NVIDIA GPU data (nvidia-smi not available).</p>
+            ) : (
+              <>
+                <p className="card-meta">{gpu.name}</p>
+                <div className="vram-row">
+                  <span>VRAM</span>
+                  <span>
+                    {formatMiB(gpu.memoryUsedMiB)} / {formatMiB(gpu.memoryTotalMiB)}
+                  </span>
+                </div>
+                <div className="progress-bar" aria-hidden={vramPct == null}>
+                  <div
+                    className="progress-fill"
+                    style={{ width: vramPct != null ? `${vramPct}%` : '0%' }}
+                  />
+                </div>
+                <div className="stat-grid">
+                  <div>
+                    <span className="stat-label">Utilization</span>
+                    <span className="stat-value">
+                      {gpu.utilizationGpu != null ? `${gpu.utilizationGpu}%` : '—'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="stat-label">Temperature</span>
+                    <span className="stat-value">
+                      {gpu.temperatureC != null ? `${gpu.temperatureC}°C` : '—'}
+                    </span>
+                  </div>
+                </div>
+                <GpuProcessTabs processes={gpu.processes} />
+              </>
+            )}
+          </section>
 
-      <section className="card">
-        <h2>CPU / System RAM</h2>
-        {!cpu?.available ? (
-          <p className="muted">CPU stats unavailable.</p>
-        ) : (
-          <>
-            <p className="card-meta">{cpu.name ?? 'CPU'}</p>
-            <div className="vram-row">
-              <span>RAM</span>
-              <span>
-                {formatMiB(cpu.memoryUsedMiB)} / {formatMiB(cpu.memoryTotalMiB)}
-              </span>
-            </div>
-            <div className="progress-bar" aria-hidden={ramPct == null}>
-              <div className="progress-fill" style={{ width: ramPct != null ? `${ramPct}%` : '0%' }} />
-            </div>
-            <div className="stat-grid">
-              <div>
-                <span className="stat-label">CPU util</span>
-                <span className="stat-value">
-                  {cpu.utilizationPercent != null ? `${cpu.utilizationPercent}%` : '—'}
-                </span>
-              </div>
-            </div>
-          </>
-        )}
-      </section>
+          <section className="card">
+            <h2>CPU / System RAM</h2>
+            {!cpu?.available ? (
+              <p className="muted">CPU stats unavailable.</p>
+            ) : (
+              <>
+                <p className="card-meta">{cpu.name ?? 'CPU'}</p>
+                <div className="vram-row">
+                  <span>RAM</span>
+                  <span>
+                    {formatMiB(cpu.memoryUsedMiB)} / {formatMiB(cpu.memoryTotalMiB)}
+                  </span>
+                </div>
+                <div className="progress-bar" aria-hidden={ramPct == null}>
+                  <div
+                    className="progress-fill"
+                    style={{ width: ramPct != null ? `${ramPct}%` : '0%' }}
+                  />
+                </div>
+                <div className="stat-grid">
+                  <div>
+                    <span className="stat-label">CPU util</span>
+                    <span className="stat-value">
+                      {cpu.utilizationPercent != null ? `${cpu.utilizationPercent}%` : '—'}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+        </div>
 
-      <ServicesPanel
-        services={status?.services ?? []}
-        busy={busy}
-        embedded={embedded}
-        onBusy={setBusy}
-        onChanged={refresh}
-      />
+        <div className="dashboard-col dashboard-col-services">
+          <ServicesPanel
+            services={status?.services ?? []}
+            busy={busy}
+            embedded={embedded}
+            onBusy={setBusy}
+            onChanged={refresh}
+          />
+        </div>
+      </div>
 
       <section className="card">
         <div className="card-header">

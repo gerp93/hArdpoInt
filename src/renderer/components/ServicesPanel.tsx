@@ -103,6 +103,18 @@ export function ServicesPanel({
       const result = await hardpointClient.saveService({
         ...service,
         workingDir: pick.dir,
+        usePath: false,
+      });
+      if (result.status === 'error') throw new Error(result.message);
+    });
+  }
+
+  async function usePath(service: DashboardService) {
+    await run(`path-${service.id}`, async () => {
+      const result = await hardpointClient.saveService({
+        ...service,
+        workingDir: null,
+        usePath: true,
       });
       if (result.status === 'error') throw new Error(result.message);
     });
@@ -213,6 +225,9 @@ export function ServicesPanel({
             }
             onUnloadAll={() => void run('unload-all', () => hardpointClient.ollamaUnload())}
             onChooseDir={() => void pickDir(service)}
+            onUsePath={
+              service.kind === 'ollama' ? () => void usePath(service) : undefined
+            }
             onRemove={() => void removeService(service.id)}
           />
         ))
@@ -229,6 +244,7 @@ function ServiceCard({
   onUnload,
   onUnloadAll,
   onChooseDir,
+  onUsePath,
   onRemove,
 }: {
   service: DashboardService;
@@ -238,23 +254,35 @@ function ServiceCard({
   onUnload: (model: string) => void;
   onUnloadAll: () => void;
   onChooseDir: () => void;
+  onUsePath?: () => void;
   onRemove: () => void;
 }) {
   const up = service.reachable === true;
   const down = service.reachable === false;
-  const hasInstall = Boolean(service.workingDir?.trim());
+  const hasInstall = Boolean(service.workingDir?.trim()) || Boolean(service.usePath);
 
-  const visibleActions = hasInstall
-    ? service.actions.filter((action) => {
-        const id = action.id.toLowerCase();
-        const label = action.label.toLowerCase();
-        const isStart = id === 'start' || label === 'start';
-        const isStop = id === 'stop' || label === 'stop';
-        if (isStart && up) return false;
-        if (isStop && down) return false;
-        return true;
-      })
-    : [];
+  const visibleActions = service.actions.filter((action) => {
+    const id = action.id.toLowerCase();
+    const label = action.label.toLowerCase();
+    const isStart = id === 'start' || label === 'start';
+    const isStop = id === 'stop' || label === 'stop';
+    if (isStart) {
+      if (!hasInstall) return false;
+      if (up) return false;
+      return true;
+    }
+    if (isStop) {
+      // Port kill does not need an install folder — only that the service is up.
+      if (down) return false;
+      if (up) return true;
+      return hasInstall;
+    }
+    return hasInstall;
+  });
+
+  const installLabel = service.usePath
+    ? 'On PATH'
+    : (service.workingDir ?? 'Not set');
 
   return (
     <div className="service-card">
@@ -269,7 +297,7 @@ function ServiceCard({
         <p className="card-meta">Device (config.yaml): {service.deviceHint}</p>
       )}
       <p className="card-meta folder-line">
-        Install: {service.workingDir ?? 'Not set'}
+        Install: {installLabel}
         <button
           type="button"
           className="btn btn-sm"
@@ -279,10 +307,22 @@ function ServiceCard({
         >
           Choose folder
         </button>
+        {onUsePath && !service.usePath && (
+          <button
+            type="button"
+            className="btn btn-sm"
+            disabled={!!busy}
+            title="Start via the ollama binary on your PATH (no install folder)"
+            onClick={onUsePath}
+          >
+            Use PATH
+          </button>
+        )}
       </p>
       {!hasInstall && (
         <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-          Choose an install folder before Start / Stop are available.
+          Choose an install folder{onUsePath ? ', or Use PATH,' : ''} before Start is available.
+          Stop still appears when the service is reachable.
         </p>
       )}
       <div className="btn-row">

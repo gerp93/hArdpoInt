@@ -24,7 +24,7 @@ import {
 import { buildServiceFromPreset, SERVICE_PRESETS } from '../shared/presets';
 
 const BUILTIN_PREVIEWS: Record<string, string> = {
-  'ollama-start': 'shell.openPath(<ollama.exe>)  OR  ollama serve',
+  'ollama-start': 'ollama.exe from install folder, or `ollama` on PATH (`ollama serve`)',
   'ollama-stop':
     'taskkill listeners on :11434 + Ollama.exe tray (Windows respawns llama-server otherwise)',
   'chatterbox-start':
@@ -35,6 +35,13 @@ const BUILTIN_PREVIEWS: Record<string, string> = {
 function mergeWorkingDirs(services: ManagedService[]): ManagedService[] {
   return services.map((s) => {
     if (s.kind === 'ollama') {
+      if (s.usePath) {
+        return {
+          ...s,
+          workingDir: null,
+          hostUrl: s.hostUrl?.trim() || getEffectiveOllamaHost(),
+        };
+      }
       return {
         ...s,
         workingDir: getOllamaLaunchDir() ?? resolveOllamaLaunchDir() ?? s.workingDir,
@@ -96,8 +103,13 @@ export function saveManagedService(
   };
 
   // Keep legacy launch-dir fields in sync when the user sets workingDir on builtins.
-  if (next.kind === 'ollama' && next.workingDir?.trim()) {
-    setOllamaLaunchDir(next.workingDir.trim());
+  if (next.kind === 'ollama') {
+    if (next.usePath) {
+      next.workingDir = null;
+    } else if (next.workingDir?.trim()) {
+      setOllamaLaunchDir(next.workingDir.trim());
+      next.usePath = false;
+    }
   }
   if (next.kind === 'chatterbox' && next.workingDir?.trim()) {
     setChatterboxLaunchDir(next.workingDir.trim());

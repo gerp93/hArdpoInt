@@ -59,7 +59,13 @@ export interface ManagedService {
   hostUrl: string | null;
   /** Extra UI hooks (loaded models, device hint). Presets set this; custom stays generic. */
   kind: 'generic' | 'ollama' | 'chatterbox';
+  /** Install folder for Start, or null when using PATH / not set. */
   workingDir: string | null;
+  /**
+   * When true, Start uses the service binary from PATH (e.g. `ollama`) instead of
+   * an install folder. Stop still uses the host port and does not need a folder.
+   */
+  usePath?: boolean;
   actions: ServiceAction[];
 }
 

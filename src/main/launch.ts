@@ -25,6 +25,34 @@ function ollamaBinaryName(): string {
   return process.platform === 'win32' ? 'ollama.exe' : 'ollama';
 }
 
+/** Resolve a bare command name via PATH (`where` / `which`). */
+export function findExecutableOnPath(command: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const checker = process.platform === 'win32' ? 'where' : 'which';
+    const child = spawn(checker, [command], {
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore'],
+      shell: false,
+    });
+    let out = '';
+    child.stdout?.on('data', (d) => {
+      out += String(d);
+    });
+    child.on('error', () => resolve(null));
+    child.on('close', (code) => {
+      if (code !== 0) {
+        resolve(null);
+        return;
+      }
+      const first = out
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .find((l) => l.length > 0);
+      resolve(first ?? null);
+    });
+  });
+}
+
 function binaryInDir(dir: string): string | null {
   const binary = path.join(dir, ollamaBinaryName());
   if (!fs.existsSync(binary)) return null;
@@ -116,13 +144,50 @@ export async function startOllamaFromDir(
   }
 }
 
+async function startOllamaFromPath(
+  binary: string
+): Promise<{ status: 'ok' } | { status: 'error'; message: string }> {
+  if (ollamaLaunchedThisSession) return { status: 'ok' };
+  ollamaLaunchedThisSession = true;
+  try {
+    if (process.platform === 'win32') {
+      // Prefer openPath for the tray app when where points at ollama.exe in Programs.
+      const err = await shell.openPath(binary);
+      if (!err) return { status: 'ok' };
+      // Fall through to `ollama serve` if openPath fails (shim / console binary).
+    }
+    const child = spawn(binary, ['serve'], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false,
+      shell: false,
+    });
+    child.on('error', () => {
+      ollamaLaunchedThisSession = false;
+    });
+    child.unref();
+    return { status: 'ok' };
+  } catch (error) {
+    ollamaLaunchedThisSession = false;
+    return { status: 'error', message: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export async function startOllama(): Promise<{ status: 'ok' } | { status: 'error'; message: string }> {
   const dir = resolveOllamaLaunchDir();
-  if (!dir) {
-    return { status: 'error', message: 'Choose an Ollama install folder first.' };
+  if (dir) {
+    if (!getOllamaLaunchDir()) setOllamaLaunchDir(dir);
+    return startOllamaFromDir(dir);
   }
-  if (!getOllamaLaunchDir()) setOllamaLaunchDir(dir);
-  return startOllamaFromDir(dir);
+  const onPath =
+    (await findExecutableOnPath(ollamaBinaryName())) ??
+    (await findExecutableOnPath('ollama'));
+  if (onPath) return startOllamaFromPath(onPath);
+  return {
+    status: 'error',
+    message:
+      'Ollama not found. Choose an install folder, or install so `ollama` is on your PATH.',
+  };
 }
 
 export async function stopOllama(): Promise<{ status: 'ok' } | { status: 'error'; message: string }> {
