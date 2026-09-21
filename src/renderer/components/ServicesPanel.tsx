@@ -4,6 +4,7 @@ import type {
   ScanHit,
   ServicePresetInfo,
 } from '../../shared/types';
+import { loopbackHostKey } from '../../shared/loopbackUrl';
 import { hardpointClient } from '../utils/api';
 
 function formatMiB(value: number | null | undefined): string {
@@ -121,7 +122,7 @@ export function ServicesPanel({
   }
 
   const addedUrls = new Set(
-    services.map((s) => s.hostUrl?.replace(/\/+$/, '').toLowerCase()).filter(Boolean) as string[]
+    services.map((s) => loopbackHostKey(s.hostUrl)).filter((k): k is string => Boolean(k))
   );
 
   return (
@@ -179,7 +180,8 @@ export function ServicesPanel({
           ) : (
             <ul className="scan-list">
               {scanHits.map((hit) => {
-                const already = addedUrls.has(hit.hostUrl.replace(/\/+$/, '').toLowerCase());
+                const hitKey = loopbackHostKey(hit.hostUrl);
+                const already = Boolean(hitKey && addedUrls.has(hitKey));
                 return (
                   <li key={hit.port}>
                     <div>
@@ -278,9 +280,11 @@ function ServiceCard({
     return hasInstall;
   });
 
-  const installLabel = service.usePath
-    ? 'On PATH'
-    : (service.workingDir ?? 'Not set');
+  const installMode: 'path' | 'folder' | 'unset' = service.usePath
+    ? 'path'
+    : service.workingDir?.trim()
+      ? 'folder'
+      : 'unset';
 
   return (
     <div className="service-card">
@@ -295,32 +299,79 @@ function ServiceCard({
         <p className="card-meta">Device (config.yaml): {service.deviceHint}</p>
       )}
       <p className="card-meta folder-line">
-        Install: {installLabel}
-        <button
-          type="button"
-          className="btn btn-sm"
-          disabled={!!busy || embedded}
-          title={embedded ? 'Use the Hardpoint desktop window to choose folders' : undefined}
-          onClick={onChooseDir}
-        >
-          Choose folder
-        </button>
-        {!service.usePath && (
-          <button
-            type="button"
-            className="btn btn-sm"
-            disabled={!!busy}
-            title="Start without an install folder — use binaries / commands from your PATH"
-            onClick={onUsePath}
-          >
-            Use PATH
-          </button>
+        {installMode === 'path' && (
+          <>
+            Install: <strong>On PATH</strong>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={!!busy || embedded}
+              title={
+                embedded
+                  ? 'Use the Hardpoint desktop window to choose folders'
+                  : 'Switch to an install folder (clears PATH mode)'
+              }
+              onClick={onChooseDir}
+            >
+              Choose folder
+            </button>
+          </>
+        )}
+        {installMode === 'folder' && (
+          <>
+            Install: <code className="install-path">{service.workingDir}</code>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={!!busy || embedded}
+              title={
+                embedded
+                  ? 'Use the Hardpoint desktop window to choose folders'
+                  : 'Pick a different install folder'
+              }
+              onClick={onChooseDir}
+            >
+              Change folder
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={!!busy}
+              title="Clear the install folder and start from PATH instead"
+              onClick={onUsePath}
+            >
+              Use PATH
+            </button>
+          </>
+        )}
+        {installMode === 'unset' && (
+          <>
+            Install: <span className="muted">Not set</span>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={!!busy || embedded}
+              title={embedded ? 'Use the Hardpoint desktop window to choose folders' : undefined}
+              onClick={onChooseDir}
+            >
+              Choose folder
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={!!busy}
+              title="Start without an install folder — use binaries / commands from your PATH"
+              onClick={onUsePath}
+            >
+              Use PATH
+            </button>
+          </>
         )}
       </p>
-      {!hasInstall && (
+      {installMode === 'unset' && (
         <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-          Choose an install folder, or Use PATH, before Start is available. Stop still appears
-          when the service is reachable.
+          Choose an install folder, or Use PATH, before Start is available. Stop still appears when
+          the service is reachable.
         </p>
       )}
       <div className="btn-row">
