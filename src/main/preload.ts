@@ -1,25 +1,17 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { HardpointApi, ManagedService } from '../shared/types';
+import type { HardpointApi, Mount } from '../shared/types';
 
 const hardpoint: HardpointApi = {
   getStatus: () => ipcRenderer.invoke('hardpoint:getStatus'),
-  ollamaStart: () => ipcRenderer.invoke('hardpoint:ollamaStart'),
-  ollamaStop: () => ipcRenderer.invoke('hardpoint:ollamaStop'),
-  ollamaUnload: (model?: string) => ipcRenderer.invoke('hardpoint:ollamaUnload', model),
-  chatterboxStart: () => ipcRenderer.invoke('hardpoint:chatterboxStart'),
-  chatterboxStop: () => ipcRenderer.invoke('hardpoint:chatterboxStop'),
-  chooseOllamaDir: () => ipcRenderer.invoke('hardpoint:chooseOllamaDir'),
-  chooseChatterboxDir: () => ipcRenderer.invoke('hardpoint:chooseChatterboxDir'),
-  chooseServiceDir: () => ipcRenderer.invoke('hardpoint:chooseServiceDir'),
-  runServiceAction: (serviceId: string, actionId: string) =>
-    ipcRenderer.invoke('hardpoint:runServiceAction', serviceId, actionId),
-  listServices: () => ipcRenderer.invoke('hardpoint:listServices'),
-  listPresets: () => ipcRenderer.invoke('hardpoint:listPresets'),
+  chooseMountDir: () => ipcRenderer.invoke('hardpoint:chooseMountDir'),
+  runMountAction: (mountId, action) => ipcRenderer.invoke('hardpoint:runMountAction', mountId, action),
+  listMounts: () => ipcRenderer.invoke('hardpoint:listMounts'),
+  listMountTemplates: () => ipcRenderer.invoke('hardpoint:listMountTemplates'),
   scanServices: () => ipcRenderer.invoke('hardpoint:scanServices'),
-  addFromPreset: (presetId, overrides) =>
-    ipcRenderer.invoke('hardpoint:addFromPreset', presetId, overrides),
-  saveService: (service: ManagedService) => ipcRenderer.invoke('hardpoint:saveService', service),
-  deleteService: (serviceId: string) => ipcRenderer.invoke('hardpoint:deleteService', serviceId),
+  addFromTemplate: (templateId, overrides) =>
+    ipcRenderer.invoke('hardpoint:addFromTemplate', templateId, overrides),
+  saveMount: (mount: Mount) => ipcRenderer.invoke('hardpoint:saveMount', mount),
+  deleteMount: (mountId: string) => ipcRenderer.invoke('hardpoint:deleteMount', mountId),
   clearCommandLog: () => ipcRenderer.invoke('hardpoint:clearCommandLog'),
   killGpuProcess: (pid: number) => ipcRenderer.invoke('hardpoint:killGpuProcess', pid),
   getAppVersion: () => ipcRenderer.invoke('hardpoint:getAppVersion'),

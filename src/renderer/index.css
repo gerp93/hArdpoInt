@@ -245,6 +245,73 @@ body {
   word-break: break-all;
 }
 
+.mount-stepper .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.mount-stepper .field input[type='text'],
+.mount-stepper .field input:not([type]),
+.mount-stepper .field input[type='number'] {
+  background: transparent;
+  border: 1px solid var(--color-border, rgba(0, 255, 100, 0.35));
+  color: inherit;
+  padding: 0.4rem 0.5rem;
+  font: inherit;
+}
+
+.mount-stepper .field.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stepper-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.75rem 0;
+}
+
+.stepper-body {
+  margin: 0.5rem 0 1rem;
+}
+
+.stepper-nav {
+  margin-top: 0.5rem;
+}
+
+.json-editor {
+  width: 100%;
+  min-height: 280px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-border, rgba(0, 255, 100, 0.35));
+  color: inherit;
+  padding: 0.75rem;
+  box-sizing: border-box;
+}
+
+.json-preview {
+  max-height: 320px;
+  overflow: auto;
+  font-size: 0.75rem;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.75rem;
+  border: 1px solid var(--color-border, rgba(0, 255, 100, 0.25));
+}
+
+.active-tab {
+  outline: 1px solid var(--color-accent, #0f0);
+}
+
+.mount-panel {
+  margin-top: 0.75rem;
+}
+
 .gpu-proc-panel {
   margin-top: 0.85rem;
 }

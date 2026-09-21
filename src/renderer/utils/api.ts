@@ -3,8 +3,8 @@ import type {
   DashboardStatus,
   DirPickerResult,
   HardpointApi,
+  MountTemplateInfo,
   ScanHit,
-  ServicePresetInfo,
 } from '../../shared/types';
 
 const HTTP_API_ROOT = 'http://127.0.0.1:3921';
@@ -31,7 +31,7 @@ function emptyStatus(): DashboardStatus {
       memoryUsedMiB: null,
       memoryTotalMiB: null,
     },
-    services: [],
+    mounts: [],
     commandLog: [],
   };
 }
@@ -44,7 +44,7 @@ function normalizeStatus(raw: Partial<DashboardStatus> | null | undefined): Dash
     ...raw,
     gpu: { ...base.gpu, ...(raw.gpu ?? {}) },
     cpu: { ...base.cpu, ...(raw.cpu ?? {}) },
-    services: raw.services ?? [],
+    mounts: raw.mounts ?? [],
     commandLog: raw.commandLog ?? [],
   };
 }
@@ -69,87 +69,51 @@ const folderOnlyInApp: DirPickerResult = {
   message: 'Choose folder only works in the Hardpoint desktop window (not in an embed/browser).',
 };
 
-/**
- * Prefer Electron IPC when running inside the Hardpoint app.
- * Fall back to the loopback HTTP API when embedded (KVGenius / RolePlaymate iframe)
- * or opened in a normal browser at :3921 / :5174.
- */
 export const hardpointClient: HardpointApi = {
   getStatus: async () => {
     if (hasIpc()) return normalizeStatus(await window.hardpoint.getStatus());
     return normalizeStatus(await httpJson<DashboardStatus>('/api/status'));
   },
-  ollamaStart: async () => {
-    if (hasIpc()) return window.hardpoint.ollamaStart();
-    return httpJson<ActionResult>('/api/ollama/start', { method: 'POST', body: '{}' });
+  chooseMountDir: async () => {
+    if (hasIpc()) return window.hardpoint.chooseMountDir();
+    return folderOnlyInApp;
   },
-  ollamaStop: async () => {
-    if (hasIpc()) return window.hardpoint.ollamaStop();
-    return httpJson<ActionResult>('/api/ollama/stop', { method: 'POST', body: '{}' });
-  },
-  ollamaUnload: async (model?: string) => {
-    if (hasIpc()) return window.hardpoint.ollamaUnload(model);
-    await httpJson('/api/ollama/unload', {
+  runMountAction: async (mountId, action) => {
+    if (hasIpc()) return window.hardpoint.runMountAction(mountId, action);
+    return httpJson<ActionResult>('/api/mounts/action', {
       method: 'POST',
-      body: JSON.stringify(model ? { model } : {}),
+      body: JSON.stringify({ mountId, action }),
     });
   },
-  chatterboxStart: async () => {
-    if (hasIpc()) return window.hardpoint.chatterboxStart();
-    return httpJson<ActionResult>('/api/chatterbox/start', { method: 'POST', body: '{}' });
-  },
-  chatterboxStop: async () => {
-    if (hasIpc()) return window.hardpoint.chatterboxStop();
-    return httpJson<ActionResult>('/api/chatterbox/stop', { method: 'POST', body: '{}' });
-  },
-  chooseOllamaDir: async () => {
-    if (hasIpc()) return window.hardpoint.chooseOllamaDir();
-    return folderOnlyInApp;
-  },
-  chooseChatterboxDir: async () => {
-    if (hasIpc()) return window.hardpoint.chooseChatterboxDir();
-    return folderOnlyInApp;
-  },
-  chooseServiceDir: async () => {
-    if (hasIpc()) return window.hardpoint.chooseServiceDir();
-    return folderOnlyInApp;
-  },
-  runServiceAction: async (serviceId, actionId) => {
-    if (hasIpc()) return window.hardpoint.runServiceAction(serviceId, actionId);
-    return httpJson<ActionResult>('/api/services/action', {
-      method: 'POST',
-      body: JSON.stringify({ serviceId, actionId }),
-    });
-  },
-  listServices: async () => {
-    if (hasIpc()) return window.hardpoint.listServices();
+  listMounts: async () => {
+    if (hasIpc()) return window.hardpoint.listMounts();
     const status = await hardpointClient.getStatus();
-    return status.services;
+    return status.mounts;
   },
-  listPresets: async () => {
-    if (hasIpc()) return window.hardpoint.listPresets();
-    return httpJson<ServicePresetInfo[]>('/api/services/presets');
+  listMountTemplates: async () => {
+    if (hasIpc()) return window.hardpoint.listMountTemplates();
+    return httpJson<MountTemplateInfo[]>('/api/mounts/templates');
   },
   scanServices: async () => {
     if (hasIpc()) return window.hardpoint.scanServices();
     return httpJson<ScanHit[]>('/api/services/scan');
   },
-  addFromPreset: async (presetId, overrides) => {
-    if (hasIpc()) return window.hardpoint.addFromPreset(presetId, overrides);
-    return httpJson('/api/services/add-preset', {
+  addFromTemplate: async (templateId, overrides) => {
+    if (hasIpc()) return window.hardpoint.addFromTemplate(templateId, overrides);
+    return httpJson('/api/mounts/add-template', {
       method: 'POST',
-      body: JSON.stringify({ presetId, ...(overrides ?? {}) }),
+      body: JSON.stringify({ templateId, ...(overrides ?? {}) }),
     });
   },
-  saveService: async (service) => {
-    if (hasIpc()) return window.hardpoint.saveService(service);
-    return httpJson('/api/services/save', { method: 'POST', body: JSON.stringify(service) });
+  saveMount: async (mount) => {
+    if (hasIpc()) return window.hardpoint.saveMount(mount);
+    return httpJson('/api/mounts/save', { method: 'POST', body: JSON.stringify(mount) });
   },
-  deleteService: async (serviceId) => {
-    if (hasIpc()) return window.hardpoint.deleteService(serviceId);
-    return httpJson('/api/services/delete', {
+  deleteMount: async (mountId) => {
+    if (hasIpc()) return window.hardpoint.deleteMount(mountId);
+    return httpJson('/api/mounts/delete', {
       method: 'POST',
-      body: JSON.stringify({ serviceId }),
+      body: JSON.stringify({ mountId }),
     });
   },
   clearCommandLog: async () => {

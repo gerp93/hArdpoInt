@@ -260,7 +260,7 @@ export function Dashboard() {
 
         <div className="dashboard-col dashboard-col-services">
           <ServicesPanel
-            services={status?.services ?? []}
+            mounts={status?.mounts ?? []}
             busy={busy}
             embedded={embedded}
             onBusy={setBusy}

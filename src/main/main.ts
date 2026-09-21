@@ -4,27 +4,18 @@ import * as path from 'path';
 import { startApiServer, stopApiServer } from './apiServer';
 import { killActiveGpuProcess } from './gpu';
 import { buildDashboardStatus } from './statusSnapshot';
-import {
-  chooseChatterboxLaunchDir,
-  chooseOllamaLaunchDir,
-  chooseServiceLaunchDir,
-  startChatterbox,
-  startOllama,
-  stopChatterbox,
-  stopOllama,
-} from './launch';
-import { unloadAll, unloadModel } from './ollama';
+import { chooseMountDir } from './launch';
 import { clearCommandLog } from './commandLog';
 import {
-  addServiceFromPreset,
-  deleteManagedService,
-  listManagedServices,
-  listPresetInfos,
-  runServiceAction,
-  saveManagedService,
+  addFromTemplate,
+  deleteMount,
+  listMounts,
+  listMountTemplates,
+  runMountAction,
+  saveMount,
 } from './services';
 import { scanLocalhostServices } from './scan';
-import type { ManagedService, UpdateCheckResult } from '../shared/types';
+import type { Mount, UpdateCheckResult } from '../shared/types';
 
 app.setName(app.isPackaged ? 'hardpoint' : 'hardpoint-dev');
 
@@ -158,34 +149,20 @@ function buildMenu(): void {
 
 function registerIpc(): void {
   ipcMain.handle('hardpoint:getStatus', () => buildDashboardStatus());
-  ipcMain.handle('hardpoint:ollamaStart', () => startOllama());
-  ipcMain.handle('hardpoint:ollamaStop', () => stopOllama());
-  ipcMain.handle('hardpoint:ollamaUnload', (_event, model?: string) =>
-    model?.trim() ? unloadModel(model.trim()) : unloadAll()
+  ipcMain.handle('hardpoint:chooseMountDir', () => chooseMountDir(mainWindow));
+  ipcMain.handle('hardpoint:runMountAction', (_event, mountId: string, action) =>
+    runMountAction(mountId, action)
   );
-  ipcMain.handle('hardpoint:chatterboxStart', () => startChatterbox());
-  ipcMain.handle('hardpoint:chatterboxStop', () => stopChatterbox());
-  ipcMain.handle('hardpoint:chooseOllamaDir', () => chooseOllamaLaunchDir(mainWindow));
-  ipcMain.handle('hardpoint:chooseChatterboxDir', () => chooseChatterboxLaunchDir(mainWindow));
-  ipcMain.handle('hardpoint:chooseServiceDir', () => chooseServiceLaunchDir(mainWindow));
-  ipcMain.handle('hardpoint:runServiceAction', (_event, serviceId: string, actionId: string) =>
-    runServiceAction(serviceId, actionId)
-  );
-  ipcMain.handle('hardpoint:listServices', () => listManagedServices());
-  ipcMain.handle('hardpoint:listPresets', () => listPresetInfos());
+  ipcMain.handle('hardpoint:listMounts', () => listMounts());
+  ipcMain.handle('hardpoint:listMountTemplates', () => listMountTemplates());
   ipcMain.handle('hardpoint:scanServices', () => scanLocalhostServices());
   ipcMain.handle(
-    'hardpoint:addFromPreset',
-    (
-      _event,
-      presetId: string,
-      overrides?: Partial<Pick<ManagedService, 'name' | 'hostUrl' | 'workingDir'>>
-    ) => addServiceFromPreset(presetId, overrides)
+    'hardpoint:addFromTemplate',
+    (_event, templateId: string, overrides?: Partial<Pick<Mount, 'name' | 'hostUrl'>>) =>
+      addFromTemplate(templateId, overrides)
   );
-  ipcMain.handle('hardpoint:saveService', (_event, service) => saveManagedService(service));
-  ipcMain.handle('hardpoint:deleteService', (_event, serviceId: string) =>
-    deleteManagedService(serviceId)
-  );
+  ipcMain.handle('hardpoint:saveMount', (_event, mount: Mount) => saveMount(mount));
+  ipcMain.handle('hardpoint:deleteMount', (_event, mountId: string) => deleteMount(mountId));
   ipcMain.handle('hardpoint:clearCommandLog', () => {
     clearCommandLog();
     return { status: 'ok' as const };

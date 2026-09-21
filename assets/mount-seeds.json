@@ -1,0 +1,137 @@
+[
+  {
+    "id": "seed-ollama",
+    "name": "Ollama",
+    "description": "Local LLM server (default :11434).",
+    "mount": {
+      "id": "ollama",
+      "name": "Ollama",
+      "hostUrl": "http://127.0.0.1:11434",
+      "launch": { "mode": "path", "cwd": null },
+      "start": {
+        "type": "shell",
+        "command": "ollama serve",
+        "preview": "ollama on PATH (`ollama serve`)"
+      },
+      "stop": {
+        "type": "port",
+        "port": 11434,
+        "preview": "taskkill listeners on :11434 + Ollama tray helpers",
+        "afterShell": [
+          "taskkill /IM \"Ollama.exe\" /T /F",
+          "taskkill /IM \"ollama.exe\" /T /F",
+          "taskkill /IM \"llama-server.exe\" /T /F"
+        ]
+      },
+      "help": null,
+      "panels": [
+        {
+          "id": "loaded-models",
+          "when": "reachable",
+          "list": {
+            "method": "GET",
+            "path": "/api/ps",
+            "items": "models",
+            "columns": [
+              { "header": "Model", "from": "name", "format": "text" },
+              { "header": "Processor", "from": "processor", "format": "text" },
+              { "header": "VRAM", "from": "size_vram", "format": "bytes" }
+            ],
+            "emptyText": "No models loaded"
+          },
+          "actions": [
+            {
+              "id": "unload",
+              "label": "Unload",
+              "scope": "row",
+              "method": "POST",
+              "path": "/api/generate",
+              "body": { "model": "{{row.name}}", "prompt": "", "keep_alive": 0 }
+            },
+            {
+              "id": "unload-all",
+              "label": "Unload all",
+              "scope": "panel",
+              "foreach": "row",
+              "enabledWhen": "panelHasRows",
+              "method": "POST",
+              "path": "/api/generate",
+              "body": { "model": "{{row.name}}", "prompt": "", "keep_alive": 0 }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "seed-chatterbox",
+    "name": "Chatterbox TTS",
+    "description": "Local TTS server (default :8004). Needs portable launch folder.",
+    "mount": {
+      "id": "chatterbox",
+      "name": "Chatterbox",
+      "hostUrl": "http://127.0.0.1:8004",
+      "launch": { "mode": "unset", "cwd": null },
+      "start": {
+        "type": "shell",
+        "command": "python_embedded\\python.exe start.py --portable --nvidia-cu128 --verbose",
+        "preview": "python_embedded\\python.exe start.py --portable --nvidia-cu128 --verbose",
+        "cwdRequired": true
+      },
+      "stop": {
+        "type": "port",
+        "port": 8004,
+        "preview": "taskkill listeners on Chatterbox port + processes under launch folder"
+      },
+      "help": {
+        "when": "launchUnset",
+        "text": "Choose a launch folder before Start is available. Stop still appears when the service is reachable."
+      },
+      "panels": []
+    }
+  },
+  {
+    "id": "seed-comfyui",
+    "name": "ComfyUI",
+    "description": "Node-based image UI (common ports 8188 / 8000).",
+    "mount": {
+      "id": "comfyui",
+      "name": "ComfyUI",
+      "hostUrl": "http://127.0.0.1:8188",
+      "launch": { "mode": "unset", "cwd": null },
+      "start": null,
+      "stop": {
+        "type": "port",
+        "port": 8188,
+        "preview": "taskkill listeners on TCP 8188"
+      },
+      "help": {
+        "when": "startMissing",
+        "text": "Start is unavailable until you set a shell command (Edit mount or Mount JSON)."
+      },
+      "panels": []
+    }
+  },
+  {
+    "id": "seed-custom",
+    "name": "Custom HTTP service",
+    "description": "Any loopback URL — you define Start in the stepper or JSON.",
+    "mount": {
+      "id": "custom",
+      "name": "Custom service",
+      "hostUrl": "http://127.0.0.1:8080",
+      "launch": { "mode": "unset", "cwd": null },
+      "start": null,
+      "stop": {
+        "type": "port",
+        "port": 8080,
+        "preview": "taskkill listeners on TCP 8080"
+      },
+      "help": {
+        "when": "startMissing",
+        "text": "Set a Start command in Edit mount (Visual or JSON)."
+      },
+      "panels": []
+    }
+  }
+]

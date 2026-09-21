@@ -2,7 +2,7 @@ import * as net from 'node:net';
 import { SERVICE_PRESETS, scanPortList, type ServicePreset } from '../shared/presets';
 import { loopbackHostKey, loopbackPortFromUrl } from '../shared/loopbackUrl';
 import type { ScanHit } from '../shared/types';
-import { listManagedServices } from './services';
+import { listMounts, suggestTemplateId } from './services';
 
 function tcpOpen(port: number, host = '127.0.0.1', timeoutMs = 400): Promise<boolean> {
   return new Promise((resolve) => {
@@ -48,7 +48,9 @@ function matchPreset(
   port: number,
   sample: { status: number; body: string; server: string } | null
 ): { preset: ServicePreset; confidence: 'high' | 'medium' | 'low' } | null {
-  const byPort = SERVICE_PRESETS.filter((p) => p.defaultPort === port || (p.id === 'comfyui' && port === 8000));
+  const byPort = SERVICE_PRESETS.filter(
+    (p) => p.defaultPort === port || (p.id === 'comfyui' && port === 8000)
+  );
   if (sample) {
     const blob = `${sample.server}\n${sample.body}`;
     for (const preset of SERVICE_PRESETS) {
@@ -82,7 +84,6 @@ async function probePort(port: number): Promise<ScanHit | null> {
   for (const c of candidates) {
     for (const path of c.probePaths) paths.add(path);
   }
-  // Always try a few generic API paths
   paths.add('/api/tags');
   paths.add('/system_stats');
   paths.add('/docs');
@@ -95,14 +96,15 @@ async function probePort(port: number): Promise<ScanHit | null> {
 
   const matched = matchPreset(port, sample);
   const hostUrl = `http://127.0.0.1:${port}`;
+  const suggestedName = matched?.preset.name ?? `Port ${port}`;
 
   return {
     port,
     hostUrl,
     open: true,
     httpStatus: sample?.status ?? null,
-    suggestedPresetId: matched?.preset.id ?? null,
-    suggestedName: matched?.preset.name ?? `Port ${port}`,
+    suggestedTemplateId: suggestTemplateId(suggestedName, port),
+    suggestedName,
     confidence: matched?.confidence ?? 'low',
     detail: sample
       ? `HTTP ${sample.status}${sample.server ? ` (${sample.server})` : ''}`
@@ -112,7 +114,7 @@ async function probePort(port: number): Promise<ScanHit | null> {
 
 /** Probe known local AI / tool ports on 127.0.0.1. Skips hosts already on the dashboard. */
 export async function scanLocalhostServices(): Promise<ScanHit[]> {
-  const managed = listManagedServices();
+  const managed = listMounts();
   const addedKeys = new Set(
     managed.map((s) => loopbackHostKey(s.hostUrl)).filter((k): k is string => Boolean(k))
   );
@@ -122,7 +124,6 @@ export async function scanLocalhostServices(): Promise<ScanHit[]> {
 
   const ports = scanPortList();
   const hits: ScanHit[] = [];
-  // Parallel but capped — avoid opening dozens of sockets at once.
   const concurrency = 8;
   for (let i = 0; i < ports.length; i += concurrency) {
     const chunk = ports.slice(i, i + concurrency);

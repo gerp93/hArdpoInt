@@ -16,3 +16,4 @@ Auto Release (`.github/workflows/auto-release.yml`) always does at least a patch
 - 2026-09-21 — rename Install → Launch from (folder or PATH)
 - 2026-09-21 — don't offer Start for Chatterbox-on-PATH or placeholder Comfy echoes
 - 2026-09-21 — Chatterbox: no Use PATH; PATH-start failure logged as error (red)
+- 2026-09-21 — JSON-driven Mounts + Add/Edit stepper (Visual | Mount JSON)

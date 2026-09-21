@@ -3,24 +3,17 @@ import * as http from 'http';
 import * as path from 'path';
 import { app } from 'electron';
 import { buildDashboardStatus } from './statusSnapshot';
-import {
-  startOllama,
-  stopOllama,
-  startChatterbox,
-  stopChatterbox,
-} from './launch';
-import { unloadAll, unloadModel } from './ollama';
 import { clearCommandLog } from './commandLog';
 import { killActiveGpuProcess } from './gpu';
 import {
-  addServiceFromPreset,
-  deleteManagedService,
-  listPresetInfos,
-  runServiceAction,
-  saveManagedService,
+  addFromTemplate,
+  deleteMount,
+  listMountTemplates,
+  runMountAction,
+  saveMount,
 } from './services';
 import { scanLocalhostServices } from './scan';
-import type { ManagedService } from '../shared/types';
+import type { Mount } from '../shared/types';
 
 const API_HOST = '127.0.0.1';
 const API_PORT = 3921;
@@ -135,78 +128,54 @@ export function startApiServer(): void {
         return;
       }
 
-      if (req.method === 'POST' && url.pathname === '/api/ollama/start') {
-        sendJson(res, 200, await startOllama(), cors);
-        return;
-      }
-      if (req.method === 'POST' && url.pathname === '/api/ollama/stop') {
-        sendJson(res, 200, await stopOllama(), cors);
-        return;
-      }
-      if (req.method === 'POST' && url.pathname === '/api/ollama/unload') {
-        const body = (await readJsonBody(req)) as { model?: string };
-        if (body.model?.trim()) {
-          await unloadModel(body.model.trim());
-        } else {
-          await unloadAll();
-        }
-        sendJson(res, 200, { status: 'ok' }, cors);
-        return;
-      }
-      if (req.method === 'POST' && url.pathname === '/api/chatterbox/start') {
-        sendJson(res, 200, await startChatterbox(), cors);
-        return;
-      }
-      if (req.method === 'POST' && url.pathname === '/api/chatterbox/stop') {
-        sendJson(res, 200, await stopChatterbox(), cors);
-        return;
-      }
-
-      if (req.method === 'GET' && url.pathname === '/api/services/presets') {
-        sendJson(res, 200, listPresetInfos(), cors);
+      if (req.method === 'GET' && url.pathname === '/api/mounts/templates') {
+        sendJson(res, 200, listMountTemplates(), cors);
         return;
       }
       if (req.method === 'GET' && url.pathname === '/api/services/scan') {
         sendJson(res, 200, await scanLocalhostServices(), cors);
         return;
       }
-      if (req.method === 'POST' && url.pathname === '/api/services/add-preset') {
+      if (req.method === 'POST' && url.pathname === '/api/mounts/add-template') {
         const body = (await readJsonBody(req)) as {
-          presetId?: string;
+          templateId?: string;
           name?: string;
           hostUrl?: string;
-          workingDir?: string | null;
         };
         sendJson(
           res,
           200,
-          addServiceFromPreset(body.presetId ?? '', {
+          addFromTemplate(body.templateId ?? '', {
             name: body.name,
             hostUrl: body.hostUrl,
-            workingDir: body.workingDir ?? null,
           }),
           cors
         );
         return;
       }
-      if (req.method === 'POST' && url.pathname === '/api/services/action') {
-        const body = (await readJsonBody(req)) as { serviceId?: string; actionId?: string };
-        sendJson(
-          res,
-          200,
-          await runServiceAction(body.serviceId ?? '', body.actionId ?? ''),
-          cors
-        );
+      if (req.method === 'POST' && url.pathname === '/api/mounts/action') {
+        const body = (await readJsonBody(req)) as {
+          mountId?: string;
+          action?:
+            | 'start'
+            | 'stop'
+            | { panelId: string; actionId: string; row?: Record<string, unknown> };
+        };
+        if (!body.action) {
+          sendJson(res, 200, { status: 'error', message: 'action is required' }, cors);
+          return;
+        }
+        sendJson(res, 200, await runMountAction(body.mountId ?? '', body.action), cors);
         return;
       }
-      if (req.method === 'POST' && url.pathname === '/api/services/save') {
-        const body = (await readJsonBody(req)) as ManagedService;
-        sendJson(res, 200, saveManagedService(body), cors);
+      if (req.method === 'POST' && url.pathname === '/api/mounts/save') {
+        const body = (await readJsonBody(req)) as Mount;
+        sendJson(res, 200, saveMount(body), cors);
         return;
       }
-      if (req.method === 'POST' && url.pathname === '/api/services/delete') {
-        const body = (await readJsonBody(req)) as { serviceId?: string };
-        sendJson(res, 200, deleteManagedService(body.serviceId ?? ''), cors);
+      if (req.method === 'POST' && url.pathname === '/api/mounts/delete') {
+        const body = (await readJsonBody(req)) as { mountId?: string };
+        sendJson(res, 200, deleteMount(body.mountId ?? ''), cors);
         return;
       }
       if (req.method === 'POST' && url.pathname === '/api/log/clear') {

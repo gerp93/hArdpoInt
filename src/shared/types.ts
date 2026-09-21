@@ -32,43 +32,23 @@ export interface CpuSnapshot {
   memoryTotalMiB: number | null;
 }
 
-export interface LoadedModel {
-  name: string;
-  sizeVram: number | null;
-  processor: string | null;
-  expiresAt: string | null;
-}
+export type {
+  DashboardMount,
+  Mount,
+  MountHelp,
+  MountLaunch,
+  MountPanel,
+  MountPanelAction,
+  MountPanelColumn,
+  MountPanelList,
+  MountPanelRuntime,
+  MountStart,
+  MountStop,
+  MountTemplateInfo,
+  LaunchMode,
+} from './mountSchema';
 
-/** One button on a managed service card. */
-export interface ServiceAction {
-  id: string;
-  label: string;
-  /** Shown next to the button so you can see what will run. */
-  commandPreview: string;
-  /** How Hardpoint runs it. */
-  runner:
-    | { type: 'builtin'; builtin: string }
-    | { type: 'shell'; command: string; cwd?: string }
-    | { type: 'stop-port'; port: number; launchDir?: string };
-}
-
-export interface ManagedService {
-  id: string;
-  name: string;
-  /** http URL used for the Reachable/Down pill (optional). */
-  hostUrl: string | null;
-  /** Extra UI hooks (loaded models, device hint). Presets set this; custom stays generic. */
-  kind: 'generic' | 'ollama' | 'chatterbox';
-  /** Launch folder for Start (cwd / binary location), or null when using PATH / not set. */
-  workingDir: string | null;
-  /**
-   * When true, Start uses binaries/commands from PATH instead of a launch folder.
-   * Stop still uses the host port and does not need a folder. Available on every card;
-   * Chatterbox Start still needs its portable folder (PATH alone is not enough).
-   */
-  usePath?: boolean;
-  actions: ServiceAction[];
-}
+import type { DashboardMount, Mount, MountTemplateInfo } from './mountSchema';
 
 /** One open loopback port found by scan (not yet added to the dashboard). */
 export interface ScanHit {
@@ -76,20 +56,10 @@ export interface ScanHit {
   hostUrl: string;
   open: boolean;
   httpStatus: number | null;
-  suggestedPresetId: string | null;
+  suggestedTemplateId: string | null;
   suggestedName: string;
   confidence: 'high' | 'medium' | 'low';
   detail: string;
-}
-
-/** Serializable preset card for the Add UI (no runners / regex). */
-export interface ServicePresetInfo {
-  id: string;
-  name: string;
-  description: string;
-  defaultHostUrl: string;
-  defaultPort: number;
-  kind: ManagedService['kind'];
 }
 
 export interface CommandLogEntry {
@@ -102,18 +72,10 @@ export interface CommandLogEntry {
   detail: string | null;
 }
 
-export interface DashboardService extends ManagedService {
-  reachable: boolean | null;
-  /** Populated when kind === 'ollama' and the host answers. */
-  loadedModels?: LoadedModel[];
-  /** Populated when kind === 'chatterbox'. */
-  deviceHint?: string | null;
-}
-
 export interface DashboardStatus {
   gpu: GpuSnapshot;
   cpu: CpuSnapshot;
-  services: DashboardService[];
+  mounts: DashboardMount[];
   commandLog: CommandLogEntry[];
 }
 
@@ -134,26 +96,21 @@ export type UpdateCheckResult =
 
 export interface HardpointApi {
   getStatus: () => Promise<DashboardStatus>;
-  ollamaStart: () => Promise<ActionResult>;
-  ollamaStop: () => Promise<ActionResult>;
-  ollamaUnload: (model?: string) => Promise<void>;
-  chatterboxStart: () => Promise<ActionResult>;
-  chatterboxStop: () => Promise<ActionResult>;
-  chooseOllamaDir: () => Promise<DirPickerResult>;
-  chooseChatterboxDir: () => Promise<DirPickerResult>;
-  chooseServiceDir: () => Promise<DirPickerResult>;
-  runServiceAction: (serviceId: string, actionId: string) => Promise<ActionResult>;
-  listServices: () => Promise<ManagedService[]>;
-  listPresets: () => Promise<ServicePresetInfo[]>;
+  chooseMountDir: () => Promise<DirPickerResult>;
+  runMountAction: (
+    mountId: string,
+    action: 'start' | 'stop' | { panelId: string; actionId: string; row?: Record<string, unknown> }
+  ) => Promise<ActionResult>;
+  listMounts: () => Promise<Mount[]>;
+  listMountTemplates: () => Promise<MountTemplateInfo[]>;
   scanServices: () => Promise<ScanHit[]>;
-  addFromPreset: (
-    presetId: string,
-    overrides?: Partial<Pick<ManagedService, 'name' | 'hostUrl' | 'workingDir'>>
-  ) => Promise<{ status: 'ok'; service: ManagedService } | { status: 'error'; message: string }>;
-  saveService: (service: ManagedService) => Promise<{ status: 'ok' } | { status: 'error'; message: string }>;
-  deleteService: (serviceId: string) => Promise<{ status: 'ok' } | { status: 'error'; message: string }>;
+  addFromTemplate: (
+    templateId: string,
+    overrides?: Partial<Pick<Mount, 'name' | 'hostUrl'>>
+  ) => Promise<{ status: 'ok'; mount: Mount } | { status: 'error'; message: string }>;
+  saveMount: (mount: Mount) => Promise<{ status: 'ok' } | { status: 'error'; message: string }>;
+  deleteMount: (mountId: string) => Promise<{ status: 'ok' } | { status: 'error'; message: string }>;
   clearCommandLog: () => Promise<{ status: 'ok' }>;
-  /** Force-kill a GPU Active/compute process by PID (not Insufficient Permissions rows). */
   killGpuProcess: (pid: number) => Promise<ActionResult>;
   getAppVersion: () => Promise<string>;
   checkForUpdates: () => Promise<UpdateCheckResult>;
