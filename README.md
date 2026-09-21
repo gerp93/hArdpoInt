@@ -2,7 +2,7 @@
 
 # Hardpoint
 
-Local dashboard for **Ollama**, **Chatterbox TTS**, and **NVIDIA GPU** status on this machine. Hardpoint starts and stops configured install folders, lists models loaded in Ollama VRAM, and exposes a loopback HTTP API for embeds.
+Local dashboard for **local AI / tool servers** and **NVIDIA GPU** status on this machine. You scan localhost or add presets (Ollama, Chatterbox, ComfyUI, …) — nothing is forced onto the dashboard. Start/Stop use each card’s actions; a loopback HTTP API supports embeds.
 
 This repo follows the shared conventions in [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards) (theming, release/CI, update-check, licensing, logo/branding) — see that repo for the rules this one is expected to keep up with.
 

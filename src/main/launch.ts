@@ -178,6 +178,19 @@ export async function chooseOllamaLaunchDir(
   }
 }
 
+/** Generic install-folder picker (no Ollama/Chatterbox layout checks). */
+export async function chooseServiceLaunchDir(
+  window: BrowserWindow | null
+): Promise<{ status: 'ok'; dir: string } | { status: 'cancelled' } | { status: 'error'; message: string }> {
+  if (!window) return { status: 'error', message: 'No window to show the folder picker.' };
+  const result = await dialog.showOpenDialog(window, {
+    title: 'Choose service install folder',
+    properties: ['openDirectory'],
+  });
+  if (result.canceled || result.filePaths.length === 0) return { status: 'cancelled' };
+  return { status: 'ok', dir: result.filePaths[0] };
+}
+
 function launcherInDir(dir: string): string | null {
   const bat = path.join(dir, 'start.bat');
   const py = path.join(dir, 'start.py');

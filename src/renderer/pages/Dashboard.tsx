@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { DashboardStatus, GpuProcess, UpdateCheckResult } from '../../shared/types';
 import { hardpointClient, isEmbeddedHttpMode } from '../utils/api';
+import { ServicesPanel } from '../components/ServicesPanel';
 
 const POLL_MS = 3000;
 
@@ -8,10 +9,6 @@ function formatMiB(value: number | null | undefined): string {
   if (value == null) return '—';
   if (value >= 1024) return `${(value / 1024).toFixed(1)} GiB`;
   return `${Math.round(value)} MiB`;
-}
-
-function StatusPill({ ok, label }: { ok: boolean; label: string }) {
-  return <span className={`status-pill ${ok ? 'status-ok' : 'status-down'}`}>{label}</span>;
 }
 
 type GpuProcTab = 'active' | 'ui';
@@ -218,181 +215,13 @@ export function Dashboard() {
         )}
       </section>
 
-      <section className="card">
-        <div className="card-header">
-          <h2>Ollama</h2>
-          <StatusPill
-            ok={!!status?.ollama.reachable}
-            label={status?.ollama.reachable ? 'Reachable' : 'Down'}
-          />
-        </div>
-        <p className="card-meta">{status?.ollama.host ?? '…'}</p>
-        <p className="card-meta folder-line">
-          Install: {status?.ollama.launchDir ?? 'Not set'}
-          <button
-            type="button"
-            className="btn btn-sm"
-            disabled={!!busy || embedded}
-            title={embedded ? 'Use the Hardpoint desktop window to choose folders' : undefined}
-            onClick={() => void runAction('ollama-dir', () => hardpointClient.chooseOllamaDir())}
-          >
-            Choose folder
-          </button>
-        </p>
-        <div className="btn-row">
-          <button
-            type="button"
-            className="btn"
-            disabled={!!busy}
-            onClick={() => void runAction('ollama-start', () => hardpointClient.ollamaStart())}
-          >
-            Start
-          </button>
-          <button
-            type="button"
-            className="btn"
-            disabled={!!busy}
-            onClick={() => void runAction('ollama-stop', () => hardpointClient.ollamaStop())}
-          >
-            Stop
-          </button>
-          <button
-            type="button"
-            className="btn"
-            disabled={!!busy || !status?.ollama.loadedModels.length}
-            onClick={() => void runAction('ollama-unload-all', () => hardpointClient.ollamaUnload())}
-          >
-            Unload all
-          </button>
-        </div>
-        <p className="card-meta cmd-preview">
-          Start: open ollama.exe / <code>ollama serve</code> · Stop: kill :11434 listeners + Ollama.exe
-          tray
-        </p>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Model</th>
-              <th>Processor</th>
-              <th>VRAM</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {(status?.ollama.loadedModels ?? []).map((m) => (
-              <tr key={m.name}>
-                <td>{m.name}</td>
-                <td>{m.processor ?? '—'}</td>
-                <td>{formatMiB(m.sizeVram)}</td>
-                <td>
-                  <button
-                    type="button"
-                    className="btn btn-sm"
-                    disabled={!!busy}
-                    onClick={() =>
-                      void runAction(`unload-${m.name}`, () => hardpointClient.ollamaUnload(m.name))
-                    }
-                  >
-                    Unload
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {!status?.ollama.loadedModels.length && (
-              <tr>
-                <td colSpan={4} className="muted">
-                  No Ollama models loaded (GPU processes above may still be ComfyUI / other apps)
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </section>
-
-      <section className="card">
-        <div className="card-header">
-          <h2>Chatterbox</h2>
-          <StatusPill
-            ok={!!status?.chatterbox.reachable}
-            label={status?.chatterbox.reachable ? 'Reachable' : 'Down'}
-          />
-        </div>
-        <p className="card-meta">{status?.chatterbox.host ?? '…'}</p>
-        {status?.chatterbox.deviceHint && (
-          <p className="card-meta">Device (config.yaml): {status.chatterbox.deviceHint}</p>
-        )}
-        <p className="card-meta folder-line">
-          Install: {status?.chatterbox.launchDir ?? 'Not set'}
-          <button
-            type="button"
-            className="btn btn-sm"
-            disabled={!!busy || embedded}
-            onClick={() =>
-              void runAction('chatterbox-dir', () => hardpointClient.chooseChatterboxDir())
-            }
-          >
-            Choose folder
-          </button>
-        </p>
-        <div className="btn-row">
-          <button
-            type="button"
-            className="btn"
-            disabled={!!busy}
-            onClick={() => void runAction('chatterbox-start', () => hardpointClient.chatterboxStart())}
-          >
-            Start
-          </button>
-          <button
-            type="button"
-            className="btn"
-            disabled={!!busy}
-            onClick={() => void runAction('chatterbox-stop', () => hardpointClient.chatterboxStop())}
-          >
-            Stop
-          </button>
-        </div>
-      </section>
-
-      {(status?.services ?? [])
-        .filter((s) => s.kind === 'generic')
-        .map((service) => (
-          <section className="card" key={service.id}>
-            <div className="card-header">
-              <h2>{service.name}</h2>
-              {service.reachable != null && (
-                <StatusPill
-                  ok={service.reachable}
-                  label={service.reachable ? 'Reachable' : 'Down'}
-                />
-              )}
-            </div>
-            {service.hostUrl && <p className="card-meta">{service.hostUrl}</p>}
-            {service.workingDir && (
-              <p className="card-meta">Dir: {service.workingDir}</p>
-            )}
-            <div className="btn-row">
-              {service.actions.map((action) => (
-                <div key={action.id} className="action-with-cmd">
-                  <button
-                    type="button"
-                    className="btn"
-                    disabled={!!busy}
-                    onClick={() =>
-                      void runAction(
-                        `${service.id}-${action.id}`,
-                        () => hardpointClient.runServiceAction(service.id, action.id)
-                      )
-                    }
-                  >
-                    {action.label}
-                  </button>
-                  <code className="cmd-preview">{action.commandPreview}</code>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
+      <ServicesPanel
+        services={status?.services ?? []}
+        busy={busy}
+        embedded={embedded}
+        onBusy={setBusy}
+        onChanged={refresh}
+      />
 
       <section className="card">
         <div className="card-header">

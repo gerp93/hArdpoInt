@@ -240,6 +240,72 @@ body {
   line-height: 1.35;
 }
 
+.service-card {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.service-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.preset-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.preset-card:hover:not(:disabled) {
+  border-color: var(--color-accent-green, #52b788);
+}
+
+.preset-card code {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.scan-results {
+  margin: 0.75rem 0 1rem;
+}
+
+.scan-heading {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+}
+
+.scan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.scan-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;

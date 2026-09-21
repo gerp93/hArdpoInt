@@ -6,6 +6,7 @@ import { buildDashboardStatus } from './statusSnapshot';
 import {
   chooseChatterboxLaunchDir,
   chooseOllamaLaunchDir,
+  chooseServiceLaunchDir,
   startChatterbox,
   startOllama,
   stopChatterbox,
@@ -14,12 +15,15 @@ import {
 import { unloadAll, unloadModel } from './ollama';
 import { clearCommandLog } from './commandLog';
 import {
+  addServiceFromPreset,
   deleteManagedService,
   listManagedServices,
+  listPresetInfos,
   runServiceAction,
   saveManagedService,
 } from './services';
-import type { UpdateCheckResult } from '../shared/types';
+import { scanLocalhostServices } from './scan';
+import type { ManagedService, UpdateCheckResult } from '../shared/types';
 
 app.setName(app.isPackaged ? 'hardpoint' : 'hardpoint-dev');
 
@@ -162,10 +166,21 @@ function registerIpc(): void {
   ipcMain.handle('hardpoint:chatterboxStop', () => stopChatterbox());
   ipcMain.handle('hardpoint:chooseOllamaDir', () => chooseOllamaLaunchDir(mainWindow));
   ipcMain.handle('hardpoint:chooseChatterboxDir', () => chooseChatterboxLaunchDir(mainWindow));
+  ipcMain.handle('hardpoint:chooseServiceDir', () => chooseServiceLaunchDir(mainWindow));
   ipcMain.handle('hardpoint:runServiceAction', (_event, serviceId: string, actionId: string) =>
     runServiceAction(serviceId, actionId)
   );
   ipcMain.handle('hardpoint:listServices', () => listManagedServices());
+  ipcMain.handle('hardpoint:listPresets', () => listPresetInfos());
+  ipcMain.handle('hardpoint:scanServices', () => scanLocalhostServices());
+  ipcMain.handle(
+    'hardpoint:addFromPreset',
+    (
+      _event,
+      presetId: string,
+      overrides?: Partial<Pick<ManagedService, 'name' | 'hostUrl' | 'workingDir'>>
+    ) => addServiceFromPreset(presetId, overrides)
+  );
   ipcMain.handle('hardpoint:saveService', (_event, service) => saveManagedService(service));
   ipcMain.handle('hardpoint:deleteService', (_event, serviceId: string) =>
     deleteManagedService(serviceId)

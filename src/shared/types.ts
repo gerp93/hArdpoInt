@@ -39,12 +39,6 @@ export interface LoadedModel {
   expiresAt: string | null;
 }
 
-export interface ServiceStatus {
-  reachable: boolean;
-  host: string;
-  launchDir: string | null;
-}
-
 /** One button on a managed service card. */
 export interface ServiceAction {
   id: string;
@@ -63,10 +57,32 @@ export interface ManagedService {
   name: string;
   /** http URL used for the Reachable/Down pill (optional). */
   hostUrl: string | null;
-  /** Extra UI for Ollama loaded-models table. */
+  /** Extra UI hooks (loaded models, device hint). Presets set this; custom stays generic. */
   kind: 'generic' | 'ollama' | 'chatterbox';
   workingDir: string | null;
   actions: ServiceAction[];
+}
+
+/** One open loopback port found by scan (not yet added to the dashboard). */
+export interface ScanHit {
+  port: number;
+  hostUrl: string;
+  open: boolean;
+  httpStatus: number | null;
+  suggestedPresetId: string | null;
+  suggestedName: string;
+  confidence: 'high' | 'medium' | 'low';
+  detail: string;
+}
+
+/** Serializable preset card for the Add UI (no runners / regex). */
+export interface ServicePresetInfo {
+  id: string;
+  name: string;
+  description: string;
+  defaultHostUrl: string;
+  defaultPort: number;
+  kind: ManagedService['kind'];
 }
 
 export interface CommandLogEntry {
@@ -79,12 +95,18 @@ export interface CommandLogEntry {
   detail: string | null;
 }
 
+export interface DashboardService extends ManagedService {
+  reachable: boolean | null;
+  /** Populated when kind === 'ollama' and the host answers. */
+  loadedModels?: LoadedModel[];
+  /** Populated when kind === 'chatterbox'. */
+  deviceHint?: string | null;
+}
+
 export interface DashboardStatus {
   gpu: GpuSnapshot;
   cpu: CpuSnapshot;
-  ollama: ServiceStatus & { loadedModels: LoadedModel[] };
-  chatterbox: ServiceStatus & { deviceHint: string | null };
-  services: Array<ManagedService & { reachable: boolean | null }>;
+  services: DashboardService[];
   commandLog: CommandLogEntry[];
 }
 
@@ -112,8 +134,15 @@ export interface HardpointApi {
   chatterboxStop: () => Promise<ActionResult>;
   chooseOllamaDir: () => Promise<DirPickerResult>;
   chooseChatterboxDir: () => Promise<DirPickerResult>;
+  chooseServiceDir: () => Promise<DirPickerResult>;
   runServiceAction: (serviceId: string, actionId: string) => Promise<ActionResult>;
   listServices: () => Promise<ManagedService[]>;
+  listPresets: () => Promise<ServicePresetInfo[]>;
+  scanServices: () => Promise<ScanHit[]>;
+  addFromPreset: (
+    presetId: string,
+    overrides?: Partial<Pick<ManagedService, 'name' | 'hostUrl' | 'workingDir'>>
+  ) => Promise<{ status: 'ok'; service: ManagedService } | { status: 'error'; message: string }>;
   saveService: (service: ManagedService) => Promise<{ status: 'ok' } | { status: 'error'; message: string }>;
   deleteService: (serviceId: string) => Promise<{ status: 'ok' } | { status: 'error'; message: string }>;
   clearCommandLog: () => Promise<{ status: 'ok' }>;

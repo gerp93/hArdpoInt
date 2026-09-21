@@ -1,10 +1,18 @@
 import { spawn } from 'node:child_process';
 import { execFile } from 'node:child_process';
 import * as fs from 'fs';
-import * as path from 'path';
-import type { ActionResult, ManagedService, ServiceAction } from '../shared/types';
+import type { ActionResult, ManagedService, ServiceAction, ServicePresetInfo } from '../shared/types';
 import { appendCommandLog } from './commandLog';
-import { readConfig, writeConfig, getOllamaLaunchDir, getChatterboxLaunchDir } from './config';
+import {
+  readConfig,
+  writeConfig,
+  getOllamaLaunchDir,
+  getChatterboxLaunchDir,
+  setOllamaLaunchDir,
+  setChatterboxLaunchDir,
+  getEffectiveOllamaHost,
+  getEffectiveChatterboxHost,
+} from './config';
 import { stopLocalServer } from './localServerProcess';
 import {
   startOllama,
@@ -13,7 +21,7 @@ import {
   stopChatterbox,
   resolveOllamaLaunchDir,
 } from './launch';
-import { getEffectiveOllamaHost, getEffectiveChatterboxHost } from './config';
+import { buildServiceFromPreset, SERVICE_PRESETS } from '../shared/presets';
 
 const BUILTIN_PREVIEWS: Record<string, string> = {
   'ollama-start': 'shell.openPath(<ollama.exe>)  OR  ollama serve',
@@ -24,107 +32,53 @@ const BUILTIN_PREVIEWS: Record<string, string> = {
   'chatterbox-stop': 'taskkill listeners on Chatterbox port + processes under install folder',
 };
 
-function defaultServices(): ManagedService[] {
-  const ollamaDir = getOllamaLaunchDir() ?? resolveOllamaLaunchDir();
-  const chatterDir = getChatterboxLaunchDir();
-  return [
-    {
-      id: 'ollama',
-      name: 'Ollama',
-      kind: 'ollama',
-      hostUrl: getEffectiveOllamaHost(),
-      workingDir: ollamaDir,
-      actions: [
-        {
-          id: 'start',
-          label: 'Start',
-          commandPreview: BUILTIN_PREVIEWS['ollama-start'],
-          runner: { type: 'builtin', builtin: 'ollama-start' },
-        },
-        {
-          id: 'stop',
-          label: 'Stop',
-          commandPreview: BUILTIN_PREVIEWS['ollama-stop'],
-          runner: { type: 'builtin', builtin: 'ollama-stop' },
-        },
-      ],
-    },
-    {
-      id: 'chatterbox',
-      name: 'Chatterbox',
-      kind: 'chatterbox',
-      hostUrl: getEffectiveChatterboxHost(),
-      workingDir: chatterDir,
-      actions: [
-        {
-          id: 'start',
-          label: 'Start',
-          commandPreview: BUILTIN_PREVIEWS['chatterbox-start'],
-          runner: { type: 'builtin', builtin: 'chatterbox-start' },
-        },
-        {
-          id: 'stop',
-          label: 'Stop',
-          commandPreview: BUILTIN_PREVIEWS['chatterbox-stop'],
-          runner: { type: 'builtin', builtin: 'chatterbox-stop' },
-        },
-      ],
-    },
-    {
-      id: 'comfyui',
-      name: 'ComfyUI',
-      kind: 'generic',
-      hostUrl: 'http://localhost:8000',
-      workingDir: null,
-      actions: [
-        {
-          id: 'start',
-          label: 'Start',
-          commandPreview: '(set working dir + start command in Edit)',
-          runner: {
-            type: 'shell',
-            command: 'echo Set a Start command for ComfyUI in Hardpoint service settings',
-          },
-        },
-        {
-          id: 'stop',
-          label: 'Stop',
-          commandPreview: 'taskkill processes listening on TCP 8000',
-          runner: { type: 'stop-port', port: 8000 },
-        },
-      ],
-    },
-  ];
-}
-
 function mergeWorkingDirs(services: ManagedService[]): ManagedService[] {
   return services.map((s) => {
-    if (s.id === 'ollama') {
+    if (s.kind === 'ollama') {
       return {
         ...s,
         workingDir: getOllamaLaunchDir() ?? resolveOllamaLaunchDir() ?? s.workingDir,
-        hostUrl: getEffectiveOllamaHost(),
+        hostUrl: s.hostUrl?.trim() || getEffectiveOllamaHost(),
       };
     }
-    if (s.id === 'chatterbox') {
+    if (s.kind === 'chatterbox') {
       return {
         ...s,
         workingDir: getChatterboxLaunchDir() ?? s.workingDir,
-        hostUrl: getEffectiveChatterboxHost(),
+        hostUrl: s.hostUrl?.trim() || getEffectiveChatterboxHost(),
       };
     }
     return s;
   });
 }
 
+/** User-configured services only — never auto-seed Ollama/Comfy/etc. */
 export function listManagedServices(): ManagedService[] {
   const stored = readConfig().services;
-  if (!stored || stored.length === 0) {
-    const seeded = defaultServices();
-    writeConfig({ ...readConfig(), services: seeded });
-    return mergeWorkingDirs(seeded);
-  }
+  if (!stored || stored.length === 0) return [];
   return mergeWorkingDirs(stored);
+}
+
+export function listPresetInfos(): ServicePresetInfo[] {
+  return SERVICE_PRESETS.map((p) => ({
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    defaultHostUrl: p.defaultHostUrl,
+    defaultPort: p.defaultPort,
+    kind: p.kind,
+  }));
+}
+
+export function addServiceFromPreset(
+  presetId: string,
+  overrides?: Partial<Pick<ManagedService, 'name' | 'hostUrl' | 'workingDir'>>
+): { status: 'ok'; service: ManagedService } | { status: 'error'; message: string } {
+  const service = buildServiceFromPreset(presetId, overrides);
+  if (!service) return { status: 'error', message: `Unknown preset: ${presetId}` };
+  const saved = saveManagedService(service);
+  if (saved.status === 'error') return saved;
+  return { status: 'ok', service };
 }
 
 export function saveManagedService(
@@ -133,8 +87,24 @@ export function saveManagedService(
   const id = service.id?.trim();
   if (!id) return { status: 'error', message: 'Service id is required.' };
   if (!service.name?.trim()) return { status: 'error', message: 'Service name is required.' };
+
+  const next: ManagedService = {
+    ...service,
+    id,
+    name: service.name.trim(),
+    actions: Array.isArray(service.actions) ? service.actions : [],
+  };
+
+  // Keep legacy launch-dir fields in sync when the user sets workingDir on builtins.
+  if (next.kind === 'ollama' && next.workingDir?.trim()) {
+    setOllamaLaunchDir(next.workingDir.trim());
+  }
+  if (next.kind === 'chatterbox' && next.workingDir?.trim()) {
+    setChatterboxLaunchDir(next.workingDir.trim());
+  }
+
   const services = listManagedServices().filter((s) => s.id !== id);
-  services.push({ ...service, id, name: service.name.trim() });
+  services.push(next);
   writeConfig({ ...readConfig(), services });
   return { status: 'ok' };
 }
@@ -143,9 +113,7 @@ export function deleteManagedService(
   serviceId: string
 ): { status: 'ok' } | { status: 'error'; message: string } {
   const id = serviceId.trim();
-  if (id === 'ollama' || id === 'chatterbox') {
-    return { status: 'error', message: 'Built-in Ollama/Chatterbox cards cannot be deleted (edit actions instead).' };
-  }
+  if (!id) return { status: 'error', message: 'Service id is required.' };
   const services = listManagedServices().filter((s) => s.id !== id);
   writeConfig({ ...readConfig(), services });
   return { status: 'ok' };

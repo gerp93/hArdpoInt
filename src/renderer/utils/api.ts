@@ -3,6 +3,8 @@ import type {
   DashboardStatus,
   DirPickerResult,
   HardpointApi,
+  ScanHit,
+  ServicePresetInfo,
 } from '../../shared/types';
 
 const HTTP_API_ROOT = 'http://127.0.0.1:3921';
@@ -29,8 +31,6 @@ function emptyStatus(): DashboardStatus {
       memoryUsedMiB: null,
       memoryTotalMiB: null,
     },
-    ollama: { reachable: false, host: '', launchDir: null, loadedModels: [] },
-    chatterbox: { reachable: false, host: '', launchDir: null, deviceHint: null },
     services: [],
     commandLog: [],
   };
@@ -44,8 +44,6 @@ function normalizeStatus(raw: Partial<DashboardStatus> | null | undefined): Dash
     ...raw,
     gpu: { ...base.gpu, ...(raw.gpu ?? {}) },
     cpu: { ...base.cpu, ...(raw.cpu ?? {}) },
-    ollama: { ...base.ollama, ...(raw.ollama ?? {}), loadedModels: raw.ollama?.loadedModels ?? [] },
-    chatterbox: { ...base.chatterbox, ...(raw.chatterbox ?? {}) },
     services: raw.services ?? [],
     commandLog: raw.commandLog ?? [],
   };
@@ -112,6 +110,10 @@ export const hardpointClient: HardpointApi = {
     if (hasIpc()) return window.hardpoint.chooseChatterboxDir();
     return folderOnlyInApp;
   },
+  chooseServiceDir: async () => {
+    if (hasIpc()) return window.hardpoint.chooseServiceDir();
+    return folderOnlyInApp;
+  },
   runServiceAction: async (serviceId, actionId) => {
     if (hasIpc()) return window.hardpoint.runServiceAction(serviceId, actionId);
     return httpJson<ActionResult>('/api/services/action', {
@@ -123,6 +125,21 @@ export const hardpointClient: HardpointApi = {
     if (hasIpc()) return window.hardpoint.listServices();
     const status = await hardpointClient.getStatus();
     return status.services;
+  },
+  listPresets: async () => {
+    if (hasIpc()) return window.hardpoint.listPresets();
+    return httpJson<ServicePresetInfo[]>('/api/services/presets');
+  },
+  scanServices: async () => {
+    if (hasIpc()) return window.hardpoint.scanServices();
+    return httpJson<ScanHit[]>('/api/services/scan');
+  },
+  addFromPreset: async (presetId, overrides) => {
+    if (hasIpc()) return window.hardpoint.addFromPreset(presetId, overrides);
+    return httpJson('/api/services/add-preset', {
+      method: 'POST',
+      body: JSON.stringify({ presetId, ...(overrides ?? {}) }),
+    });
   },
   saveService: async (service) => {
     if (hasIpc()) return window.hardpoint.saveService(service);

@@ -12,10 +12,13 @@ import {
 import { unloadAll, unloadModel } from './ollama';
 import { clearCommandLog } from './commandLog';
 import {
+  addServiceFromPreset,
   deleteManagedService,
+  listPresetInfos,
   runServiceAction,
   saveManagedService,
 } from './services';
+import { scanLocalhostServices } from './scan';
 import type { ManagedService } from '../shared/types';
 
 const API_HOST = '127.0.0.1';
@@ -158,6 +161,33 @@ export function startApiServer(): void {
         return;
       }
 
+      if (req.method === 'GET' && url.pathname === '/api/services/presets') {
+        sendJson(res, 200, listPresetInfos(), cors);
+        return;
+      }
+      if (req.method === 'GET' && url.pathname === '/api/services/scan') {
+        sendJson(res, 200, await scanLocalhostServices(), cors);
+        return;
+      }
+      if (req.method === 'POST' && url.pathname === '/api/services/add-preset') {
+        const body = (await readJsonBody(req)) as {
+          presetId?: string;
+          name?: string;
+          hostUrl?: string;
+          workingDir?: string | null;
+        };
+        sendJson(
+          res,
+          200,
+          addServiceFromPreset(body.presetId ?? '', {
+            name: body.name,
+            hostUrl: body.hostUrl,
+            workingDir: body.workingDir ?? null,
+          }),
+          cors
+        );
+        return;
+      }
       if (req.method === 'POST' && url.pathname === '/api/services/action') {
         const body = (await readJsonBody(req)) as { serviceId?: string; actionId?: string };
         sendJson(

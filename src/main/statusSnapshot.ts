@@ -1,6 +1,5 @@
-import type { DashboardStatus } from '../shared/types';
+import type { DashboardService, DashboardStatus } from '../shared/types';
 import {
-  getChatterboxHostForStatus,
   getChatterboxLaunchDirForStatus,
   isReachable as isChatterboxReachable,
   readDeviceHint,
@@ -8,9 +7,7 @@ import {
 import { getCommandLog } from './commandLog';
 import { getCpuSnapshot } from './cpu';
 import { getGpuSnapshot } from './gpu';
-import { resolveOllamaLaunchDir } from './launch';
 import {
-  getOllamaHostForStatus,
   isReachable as isOllamaReachable,
   listLoaded,
 } from './ollama';
@@ -30,42 +27,35 @@ async function probeHost(hostUrl: string | null): Promise<boolean | null> {
 
 export async function buildDashboardStatus(): Promise<DashboardStatus> {
   const services = listManagedServices();
-  const [gpu, cpu, ollamaReachable, chatterboxReachable] = await Promise.all([
-    getGpuSnapshot(),
-    getCpuSnapshot(),
-    isOllamaReachable(),
-    isChatterboxReachable(),
-  ]);
+  const [gpu, cpu] = await Promise.all([getGpuSnapshot(), getCpuSnapshot()]);
 
-  const loadedModels = ollamaReachable ? await listLoaded() : [];
-
-  const serviceReach = await Promise.all(
+  const enriched: DashboardService[] = await Promise.all(
     services.map(async (s) => {
-      if (s.kind === 'ollama') return ollamaReachable;
-      if (s.kind === 'chatterbox') return chatterboxReachable;
-      return probeHost(s.hostUrl);
+      let reachable: boolean | null = null;
+      if (s.kind === 'ollama') {
+        reachable = await isOllamaReachable();
+      } else if (s.kind === 'chatterbox') {
+        reachable = await isChatterboxReachable();
+      } else {
+        reachable = await probeHost(s.hostUrl);
+      }
+
+      const row: DashboardService = { ...s, reachable };
+
+      if (s.kind === 'ollama' && reachable) {
+        row.loadedModels = await listLoaded();
+      }
+      if (s.kind === 'chatterbox') {
+        row.deviceHint = readDeviceHint(getChatterboxLaunchDirForStatus());
+      }
+      return row;
     })
   );
 
   return {
     gpu,
     cpu,
-    ollama: {
-      reachable: ollamaReachable,
-      host: getOllamaHostForStatus(),
-      launchDir: resolveOllamaLaunchDir(),
-      loadedModels,
-    },
-    chatterbox: {
-      reachable: chatterboxReachable,
-      host: getChatterboxHostForStatus(),
-      launchDir: getChatterboxLaunchDirForStatus(),
-      deviceHint: readDeviceHint(getChatterboxLaunchDirForStatus()),
-    },
-    services: services.map((s, i) => ({
-      ...s,
-      reachable: serviceReach[i] ?? null,
-    })),
+    services: enriched,
     commandLog: getCommandLog(),
   };
 }
