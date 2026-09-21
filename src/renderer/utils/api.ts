@@ -156,6 +156,13 @@ export const hardpointClient: HardpointApi = {
     if (hasIpc()) return window.hardpoint.clearCommandLog();
     return httpJson('/api/log/clear', { method: 'POST', body: '{}' });
   },
+  killGpuProcess: async (pid) => {
+    if (hasIpc()) return window.hardpoint.killGpuProcess(pid);
+    return httpJson('/api/gpu/kill', {
+      method: 'POST',
+      body: JSON.stringify({ pid }),
+    });
+  },
   getAppVersion: async () => {
     if (hasIpc()) return window.hardpoint.getAppVersion();
     return 'embed';

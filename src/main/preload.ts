@@ -21,6 +21,7 @@ const hardpoint: HardpointApi = {
   saveService: (service: ManagedService) => ipcRenderer.invoke('hardpoint:saveService', service),
   deleteService: (serviceId: string) => ipcRenderer.invoke('hardpoint:deleteService', serviceId),
   clearCommandLog: () => ipcRenderer.invoke('hardpoint:clearCommandLog'),
+  killGpuProcess: (pid: number) => ipcRenderer.invoke('hardpoint:killGpuProcess', pid),
   getAppVersion: () => ipcRenderer.invoke('hardpoint:getAppVersion'),
   checkForUpdates: () => ipcRenderer.invoke('hardpoint:checkForUpdates'),
 };

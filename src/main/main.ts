@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
 import { startApiServer, stopApiServer } from './apiServer';
+import { killActiveGpuProcess } from './gpu';
 import { buildDashboardStatus } from './statusSnapshot';
 import {
   chooseChatterboxLaunchDir,
@@ -189,6 +190,7 @@ function registerIpc(): void {
     clearCommandLog();
     return { status: 'ok' as const };
   });
+  ipcMain.handle('hardpoint:killGpuProcess', (_event, pid: number) => killActiveGpuProcess(pid));
   ipcMain.handle('hardpoint:getAppVersion', () => app.getVersion());
   ipcMain.handle('hardpoint:checkForUpdates', () => checkForUpdatesNow());
 }

@@ -112,6 +112,20 @@ async function killPid(pid: number): Promise<void> {
   }
 }
 
+/** Force-kill a process by PID (used by Stop and by GPU Active/compute Kill). */
+export async function killProcessByPid(
+  pid: number
+): Promise<{ status: 'ok' } | { status: 'error'; message: string }> {
+  if (!Number.isInteger(pid) || pid <= 0) {
+    return { status: 'error', message: 'Invalid PID.' };
+  }
+  if (pid === process.pid || pid === process.ppid) {
+    return { status: 'error', message: 'Refusing to kill Hardpoint itself.' };
+  }
+  await killPid(pid);
+  return { status: 'ok' };
+}
+
 export async function stopLocalServer(options: {
   hostUrl: string;
   fallbackPort: number;

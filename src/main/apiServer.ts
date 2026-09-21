@@ -11,6 +11,7 @@ import {
 } from './launch';
 import { unloadAll, unloadModel } from './ollama';
 import { clearCommandLog } from './commandLog';
+import { killActiveGpuProcess } from './gpu';
 import {
   addServiceFromPreset,
   deleteManagedService,
@@ -211,6 +212,11 @@ export function startApiServer(): void {
       if (req.method === 'POST' && url.pathname === '/api/log/clear') {
         clearCommandLog();
         sendJson(res, 200, { status: 'ok' }, cors);
+        return;
+      }
+      if (req.method === 'POST' && url.pathname === '/api/gpu/kill') {
+        const body = (await readJsonBody(req)) as { pid?: number };
+        sendJson(res, 200, await killActiveGpuProcess(Number(body.pid)), cors);
         return;
       }
 

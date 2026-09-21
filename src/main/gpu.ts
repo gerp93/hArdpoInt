@@ -1,5 +1,7 @@
 import { execFile } from 'node:child_process';
-import type { GpuProcess, GpuSnapshot } from '../shared/types';
+import type { ActionResult, GpuProcess, GpuSnapshot } from '../shared/types';
+import { appendCommandLog } from './commandLog';
+import { killProcessByPid } from './localServerProcess';
 
 function run(file: string, args: string[], timeoutMs = 5_000): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -228,4 +230,53 @@ export async function getGpuSnapshot(): Promise<GpuSnapshot> {
   } catch {
     return emptySnapshot();
   }
+}
+
+function isInsufficientPermissionsName(name: string): boolean {
+  return /insufficient\s+permissions/i.test(name);
+}
+
+/**
+ * Kill a process listed under Active / compute. Refuses UI-tab processes,
+ * Hardpoint itself, and nvidia-smi "[Insufficient Permissions]" rows (no
+ * usable handle / name — killing by PID alone would be a blind shot).
+ */
+export async function killActiveGpuProcess(pid: number): Promise<ActionResult> {
+  const snapshot = await getGpuSnapshot();
+  const target = snapshot.processes.find((p) => p.pid === pid);
+  const cmd = `taskkill /PID ${pid} /T /F`;
+
+  if (!target) {
+    const message = `PID ${pid} is not on the current GPU process list.`;
+    appendCommandLog({ command: cmd, ok: false, detail: message });
+    return { status: 'error', message, commands: [cmd] };
+  }
+  if (target.kind !== 'active') {
+    const message = 'Kill is only offered on Active / compute processes.';
+    appendCommandLog({ command: cmd, ok: false, detail: message });
+    return { status: 'error', message, commands: [cmd] };
+  }
+  if (isInsufficientPermissionsName(target.name)) {
+    const message = 'Cannot kill processes nvidia-smi reports as [Insufficient Permissions].';
+    appendCommandLog({ command: cmd, ok: false, detail: message });
+    return { status: 'error', message, commands: [cmd] };
+  }
+
+  appendCommandLog({
+    command: cmd,
+    ok: true,
+    detail: `killing ${target.name} (PID ${pid})…`,
+  });
+  const result = await killProcessByPid(pid);
+  appendCommandLog({
+    command: cmd,
+    ok: result.status === 'ok',
+    detail:
+      result.status === 'ok'
+        ? `killed ${target.name} (PID ${pid})`
+        : result.message,
+  });
+  return result.status === 'ok'
+    ? { status: 'ok', commands: [cmd] }
+    : { status: 'error', message: result.message, commands: [cmd] };
 }

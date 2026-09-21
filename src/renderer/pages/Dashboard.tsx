@@ -21,7 +21,19 @@ function formatProcessLine(p: GpuProcess): string {
   return `${p.name} (${bits.join(', ')})`;
 }
 
-function GpuProcessTabs({ processes }: { processes: GpuProcess[] }) {
+function canKillGpuProcess(p: GpuProcess): boolean {
+  return p.kind === 'active' && !/insufficient\s+permissions/i.test(p.name);
+}
+
+function GpuProcessTabs({
+  processes,
+  busy,
+  onKill,
+}: {
+  processes: GpuProcess[];
+  busy: string | null;
+  onKill: (pid: number) => void;
+}) {
   const [tab, setTab] = useState<GpuProcTab>('active');
   const active = processes.filter((p) => p.kind === 'active');
   const ui = processes.filter((p) => p.kind === 'ui');
@@ -51,13 +63,26 @@ function GpuProcessTabs({ processes }: { processes: GpuProcess[] }) {
       </div>
       <p className="muted gpu-proc-hint">
         {tab === 'active'
-          ? 'Processes that look like real GPU work (models, encode, compute). On Windows, WDDM often hides per-process VRAM — names and type are the signal.'
+          ? 'Processes that look like real GPU work (models, encode, compute). Kill ends the whole process (not a clean model unload). On Windows, WDDM often hides per-process VRAM — names and type are the signal.'
           : 'Desktop, browser, and overlay clients that hold a GPU context for compositing. They are “on” the GPU but usually idle (0% util).'}
       </p>
       {list.length > 0 ? (
         <ul className="proc-list">
           {list.map((p) => (
-            <li key={p.pid}>{formatProcessLine(p)}</li>
+            <li key={p.pid} className="proc-row">
+              <span className="proc-label">{formatProcessLine(p)}</span>
+              {tab === 'active' && canKillGpuProcess(p) && (
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={!!busy}
+                  title={`Force-kill PID ${p.pid} (${p.name})`}
+                  onClick={() => onKill(p.pid)}
+                >
+                  Kill
+                </button>
+              )}
+            </li>
           ))}
         </ul>
       ) : (
@@ -187,7 +212,16 @@ export function Dashboard() {
                     </span>
                   </div>
                 </div>
-                <GpuProcessTabs processes={gpu.processes} />
+                <GpuProcessTabs
+                  processes={gpu.processes}
+                  busy={busy}
+                  onKill={(pid) =>
+                    void runAction(`kill-gpu-${pid}`, async () => {
+                      const result = await hardpointClient.killGpuProcess(pid);
+                      if (result.status === 'error') throw new Error(result.message);
+                    })
+                  }
+                />
               </>
             )}
           </section>

@@ -153,6 +153,8 @@ export interface HardpointApi {
   saveService: (service: ManagedService) => Promise<{ status: 'ok' } | { status: 'error'; message: string }>;
   deleteService: (serviceId: string) => Promise<{ status: 'ok' } | { status: 'error'; message: string }>;
   clearCommandLog: () => Promise<{ status: 'ok' }>;
+  /** Force-kill a GPU Active/compute process by PID (not Insufficient Permissions rows). */
+  killGpuProcess: (pid: number) => Promise<ActionResult>;
   getAppVersion: () => Promise<string>;
   checkForUpdates: () => Promise<UpdateCheckResult>;
 }
