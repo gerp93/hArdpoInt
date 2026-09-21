@@ -125,6 +125,11 @@ export function ServicesPanel({
     services.map((s) => loopbackHostKey(s.hostUrl)).filter((k): k is string => Boolean(k))
   );
 
+  const newScanHits = (scanHits ?? []).filter((hit) => {
+    const key = loopbackHostKey(hit.hostUrl);
+    return !key || !addedUrls.has(key);
+  });
+
   return (
     <section className="card">
       <div className="card-header">
@@ -175,34 +180,33 @@ export function ServicesPanel({
       {scanHits && (
         <div className="scan-results">
           <h3 className="scan-heading">Scan results</h3>
-          {scanHits.length === 0 ? (
-            <p className="muted">No known ports open on 127.0.0.1.</p>
+          {newScanHits.length === 0 ? (
+            <p className="muted">
+              {scanHits.length === 0
+                ? 'No known ports open on 127.0.0.1.'
+                : 'Everything found is already on the dashboard.'}
+            </p>
           ) : (
             <ul className="scan-list">
-              {scanHits.map((hit) => {
-                const hitKey = loopbackHostKey(hit.hostUrl);
-                const already = Boolean(hitKey && addedUrls.has(hitKey));
-                return (
-                  <li key={hit.port}>
-                    <div>
-                      <strong>{hit.suggestedName}</strong>{' '}
-                      <code>{hit.hostUrl}</code>
-                      <span className="muted">
-                        {' '}
-                        · {hit.detail} · {hit.confidence} confidence
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-sm"
-                      disabled={already || !!busy}
-                      onClick={() => void addHit(hit)}
-                    >
-                      {already ? 'Added' : 'Add'}
-                    </button>
-                  </li>
-                );
-              })}
+              {newScanHits.map((hit) => (
+                <li key={hit.port}>
+                  <div>
+                    <strong>{hit.suggestedName}</strong> <code>{hit.hostUrl}</code>
+                    <span className="muted">
+                      {' '}
+                      · {hit.detail} · {hit.confidence} confidence
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    disabled={!!busy}
+                    onClick={() => void addHit(hit)}
+                  >
+                    Add
+                  </button>
+                </li>
+              ))}
             </ul>
           )}
         </div>
