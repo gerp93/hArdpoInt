@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { HardpointApi } from '../shared/types';
+import type { HardpointApi, ManagedService } from '../shared/types';
 
 const hardpoint: HardpointApi = {
   getStatus: () => ipcRenderer.invoke('hardpoint:getStatus'),
@@ -10,6 +10,12 @@ const hardpoint: HardpointApi = {
   chatterboxStop: () => ipcRenderer.invoke('hardpoint:chatterboxStop'),
   chooseOllamaDir: () => ipcRenderer.invoke('hardpoint:chooseOllamaDir'),
   chooseChatterboxDir: () => ipcRenderer.invoke('hardpoint:chooseChatterboxDir'),
+  runServiceAction: (serviceId: string, actionId: string) =>
+    ipcRenderer.invoke('hardpoint:runServiceAction', serviceId, actionId),
+  listServices: () => ipcRenderer.invoke('hardpoint:listServices'),
+  saveService: (service: ManagedService) => ipcRenderer.invoke('hardpoint:saveService', service),
+  deleteService: (serviceId: string) => ipcRenderer.invoke('hardpoint:deleteService', serviceId),
+  clearCommandLog: () => ipcRenderer.invoke('hardpoint:clearCommandLog'),
 };
 
 contextBridge.exposeInMainWorld('hardpoint', hardpoint);

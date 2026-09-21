@@ -14,6 +14,14 @@ export interface GpuSnapshot {
   processes: GpuProcess[];
 }
 
+export interface CpuSnapshot {
+  available: boolean;
+  name: string | null;
+  utilizationPercent: number | null;
+  memoryUsedMiB: number | null;
+  memoryTotalMiB: number | null;
+}
+
 export interface LoadedModel {
   name: string;
   sizeVram: number | null;
@@ -27,13 +35,52 @@ export interface ServiceStatus {
   launchDir: string | null;
 }
 
-export interface DashboardStatus {
-  gpu: GpuSnapshot;
-  ollama: ServiceStatus & { loadedModels: LoadedModel[] };
-  chatterbox: ServiceStatus & { deviceHint: string | null };
+/** One button on a managed service card. */
+export interface ServiceAction {
+  id: string;
+  label: string;
+  /** Shown next to the button so you can see what will run. */
+  commandPreview: string;
+  /** How Hardpoint runs it. */
+  runner:
+    | { type: 'builtin'; builtin: string }
+    | { type: 'shell'; command: string; cwd?: string }
+    | { type: 'stop-port'; port: number; launchDir?: string };
 }
 
-export type ActionResult = { status: 'ok' } | { status: 'error'; message: string };
+export interface ManagedService {
+  id: string;
+  name: string;
+  /** http URL used for the Reachable/Down pill (optional). */
+  hostUrl: string | null;
+  /** Extra UI for Ollama loaded-models table. */
+  kind: 'generic' | 'ollama' | 'chatterbox';
+  workingDir: string | null;
+  actions: ServiceAction[];
+}
+
+export interface CommandLogEntry {
+  id: string;
+  at: string;
+  serviceId: string | null;
+  actionId: string | null;
+  command: string;
+  ok: boolean;
+  detail: string | null;
+}
+
+export interface DashboardStatus {
+  gpu: GpuSnapshot;
+  cpu: CpuSnapshot;
+  ollama: ServiceStatus & { loadedModels: LoadedModel[] };
+  chatterbox: ServiceStatus & { deviceHint: string | null };
+  services: Array<ManagedService & { reachable: boolean | null }>;
+  commandLog: CommandLogEntry[];
+}
+
+export type ActionResult =
+  | { status: 'ok'; commands?: string[] }
+  | { status: 'error'; message: string; commands?: string[] };
 
 export type DirPickerResult =
   | { status: 'ok'; dir: string }
@@ -49,4 +96,9 @@ export interface HardpointApi {
   chatterboxStop: () => Promise<ActionResult>;
   chooseOllamaDir: () => Promise<DirPickerResult>;
   chooseChatterboxDir: () => Promise<DirPickerResult>;
+  runServiceAction: (serviceId: string, actionId: string) => Promise<ActionResult>;
+  listServices: () => Promise<ManagedService[]>;
+  saveService: (service: ManagedService) => Promise<{ status: 'ok' } | { status: 'error'; message: string }>;
+  deleteService: (serviceId: string) => Promise<{ status: 'ok' } | { status: 'error'; message: string }>;
+  clearCommandLog: () => Promise<{ status: 'ok' }>;
 }

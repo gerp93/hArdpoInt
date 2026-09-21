@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
+import type { ManagedService } from '../shared/types';
 
 export const DEFAULT_OLLAMA_HOST = 'http://localhost:11434';
 export const DEFAULT_CHATTERBOX_HOST = 'http://localhost:8004';
@@ -10,6 +11,8 @@ export interface AppConfig {
   chatterboxHost?: string;
   ollamaLaunchDir?: string;
   chatterboxLaunchDir?: string;
+  /** User-editable local services (Ollama/Chatterbox/ComfyUI/custom). */
+  services?: ManagedService[];
 }
 
 function getConfigPath(): string {

@@ -12,6 +12,13 @@ import {
   stopOllama,
 } from './launch';
 import { unloadAll, unloadModel } from './ollama';
+import { clearCommandLog } from './commandLog';
+import {
+  deleteManagedService,
+  listManagedServices,
+  runServiceAction,
+  saveManagedService,
+} from './services';
 
 app.setName(app.isPackaged ? 'hardpoint' : 'hardpoint-dev');
 
@@ -119,6 +126,18 @@ function registerIpc(): void {
   ipcMain.handle('hardpoint:chatterboxStop', () => stopChatterbox());
   ipcMain.handle('hardpoint:chooseOllamaDir', () => chooseOllamaLaunchDir(mainWindow));
   ipcMain.handle('hardpoint:chooseChatterboxDir', () => chooseChatterboxLaunchDir(mainWindow));
+  ipcMain.handle('hardpoint:runServiceAction', (_event, serviceId: string, actionId: string) =>
+    runServiceAction(serviceId, actionId)
+  );
+  ipcMain.handle('hardpoint:listServices', () => listManagedServices());
+  ipcMain.handle('hardpoint:saveService', (_event, service) => saveManagedService(service));
+  ipcMain.handle('hardpoint:deleteService', (_event, serviceId: string) =>
+    deleteManagedService(serviceId)
+  );
+  ipcMain.handle('hardpoint:clearCommandLog', () => {
+    clearCommandLog();
+    return { status: 'ok' as const };
+  });
 }
 
 function setupAutoUpdater(): void {

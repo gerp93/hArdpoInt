@@ -10,6 +10,13 @@ import {
   stopChatterbox,
 } from './launch';
 import { unloadAll, unloadModel } from './ollama';
+import { clearCommandLog } from './commandLog';
+import {
+  deleteManagedService,
+  runServiceAction,
+  saveManagedService,
+} from './services';
+import type { ManagedService } from '../shared/types';
 
 const API_HOST = '127.0.0.1';
 const API_PORT = 3921;
@@ -21,21 +28,13 @@ function isLoopbackAddress(address: string | undefined): boolean {
 }
 
 function corsHeaders(origin: string | undefined): Record<string, string> {
+  // This server is loopback-only. Embeds (RolePlaymate / KVGenius) may send a
+  // localhost Origin, a null/file Origin when packaged, or none — always allow.
   const headers: Record<string, string> = {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Origin': origin && origin !== 'null' ? origin : '*',
   };
-  if (origin) {
-    try {
-      const url = new URL(origin);
-      const host = url.hostname.toLowerCase();
-      if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
-        headers['Access-Control-Allow-Origin'] = origin;
-      }
-    } catch {
-      // ignore bad origin
-    }
-  }
   return headers;
 }
 
@@ -154,6 +153,32 @@ export function startApiServer(): void {
         return;
       }
 
+      if (req.method === 'POST' && url.pathname === '/api/services/action') {
+        const body = (await readJsonBody(req)) as { serviceId?: string; actionId?: string };
+        sendJson(
+          res,
+          200,
+          await runServiceAction(body.serviceId ?? '', body.actionId ?? ''),
+          cors
+        );
+        return;
+      }
+      if (req.method === 'POST' && url.pathname === '/api/services/save') {
+        const body = (await readJsonBody(req)) as ManagedService;
+        sendJson(res, 200, saveManagedService(body), cors);
+        return;
+      }
+      if (req.method === 'POST' && url.pathname === '/api/services/delete') {
+        const body = (await readJsonBody(req)) as { serviceId?: string };
+        sendJson(res, 200, deleteManagedService(body.serviceId ?? ''), cors);
+        return;
+      }
+      if (req.method === 'POST' && url.pathname === '/api/log/clear') {
+        clearCommandLog();
+        sendJson(res, 200, { status: 'ok' }, cors);
+        return;
+      }
+
       if (req.method === 'GET' && url.pathname === '/') {
         if (!app.isPackaged) {
           // Embed hosts iframe this URL; redirect to the Vite UI in dev.
@@ -188,7 +213,12 @@ export function startApiServer(): void {
     }
   });
 
-  server.listen(API_PORT, API_HOST);
+  server.listen(API_PORT, API_HOST, () => {
+    console.log(`[hardpoint] API listening on http://${API_HOST}:${API_PORT}`);
+  });
+  server.on('error', (err) => {
+    console.error(`[hardpoint] API failed to bind ${API_HOST}:${API_PORT}:`, err);
+  });
 }
 
 export function stopApiServer(): void {

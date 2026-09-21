@@ -232,3 +232,61 @@ body {
   background: rgba(155, 34, 38, 0.35);
   border: 1px solid var(--color-accent-red, #9b2226);
 }
+
+.banner-info {
+  background: rgba(34, 100, 155, 0.35);
+  border: 1px solid rgba(100, 180, 255, 0.5);
+  font-size: 0.85rem;
+}
+
+.cmd-preview {
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.75;
+  margin-top: 0.35rem;
+  word-break: break-all;
+}
+
+.action-with-cmd {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+
+.cmd-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 0.8rem;
+}
+
+.cmd-log li {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.cmd-log .cmd-time {
+  opacity: 0.6;
+  min-width: 4.5rem;
+}
+
+.cmd-log .cmd-detail {
+  opacity: 0.7;
+  width: 100%;
+  padding-left: 4.5rem;
+}
+
+.cmd-log .cmd-fail code {
+  color: var(--color-accent-red, #f88);
+}
+
+.cmd-log .cmd-ok code {
+  color: inherit;
+}

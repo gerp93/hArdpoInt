@@ -126,21 +126,36 @@ export async function startOllama(): Promise<{ status: 'ok' } | { status: 'error
 }
 
 export async function stopOllama(): Promise<{ status: 'ok' } | { status: 'error'; message: string }> {
+  const commands: string[] = [];
   if (!(await isOllamaReachable())) {
     ollamaLaunchedThisSession = false;
-    return { status: 'ok' };
+    // Still try to kill tray — user may have clicked Stop while it was mid-restart.
+  } else {
+    const hostUrl = getEffectiveOllamaHost();
+    const result = await stopLocalServer({
+      hostUrl,
+      fallbackPort: Number(new URL(hostUrl).port) || 11434,
+      launchDir: resolveOllamaLaunchDir(),
+    });
+    commands.push(`stopLocalServer(${hostUrl})`);
+    if (result.status === 'error') {
+      // continue to tray kill anyway
+    }
   }
-  const hostUrl = getEffectiveOllamaHost();
-  const result = await stopLocalServer({
-    hostUrl,
-    fallbackPort: Number(new URL(hostUrl).port) || 11434,
-    launchDir: resolveOllamaLaunchDir(),
-  });
+
+  if (process.platform === 'win32') {
+    const { forceStopOllamaWindows } = await import('./services');
+    commands.push(...(await forceStopOllamaWindows()));
+  }
+
   ollamaLaunchedThisSession = false;
-  if (result.status === 'error') return result;
-  await new Promise((resolve) => setTimeout(resolve, 800));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
   if (await isOllamaReachable()) {
-    return { status: 'error', message: 'Ollama is still running.' };
+    return {
+      status: 'error',
+      message:
+        'Ollama is still reachable. On Windows the tray app often respawns the server — quit Ollama from the system tray, or run Stop again.',
+    };
   }
   return { status: 'ok' };
 }

@@ -1,8 +1,6 @@
 import { execFile } from 'node:child_process';
 import type { GpuProcess, GpuSnapshot } from '../shared/types';
 
-const PROCESS_NAME_FILTERS = ['ollama', 'chatterbox', 'python_embedded', 'llama-server'];
-
 function run(file: string, args: string[], timeoutMs = 5_000): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
@@ -29,14 +27,17 @@ function emptySnapshot(): GpuSnapshot {
   };
 }
 
-function matchesFilter(processName: string): boolean {
-  const lower = processName.toLowerCase();
-  return PROCESS_NAME_FILTERS.some((token) => lower.includes(token));
-}
-
 function parseNumber(value: string): number | null {
   const n = Number(value.trim());
   return Number.isFinite(n) ? n : null;
+}
+
+/** Basename for display; keep full path in name for clarity when useful. */
+function displayProcessName(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+  const parts = trimmed.split(/[/\\]/);
+  return parts[parts.length - 1] || trimmed;
 }
 
 export async function getGpuSnapshot(): Promise<GpuSnapshot> {
@@ -68,13 +69,13 @@ export async function getGpuSnapshot(): Promise<GpuSnapshot> {
         const pid = parseNumber(cols[0] ?? '');
         const procName = cols[1] ?? '';
         if (pid == null || !procName) continue;
-        if (!matchesFilter(procName)) continue;
         processes.push({
           pid,
-          name: procName,
+          name: displayProcessName(procName),
           memoryMiB: cols[2] != null ? parseNumber(cols[2]) : null,
         });
       }
+      processes.sort((a, b) => (b.memoryMiB ?? 0) - (a.memoryMiB ?? 0));
     } catch {
       // compute-apps query can fail when nothing is running
     }
