@@ -227,9 +227,10 @@ export function ServicesPanel({
             busy={busy}
             embedded={embedded}
             onAction={(actionId) =>
-              void run(`${service.id}-${actionId}`, () =>
-                hardpointClient.runServiceAction(service.id, actionId)
-              )
+              void run(`${service.id}-${actionId}`, async () => {
+                const result = await hardpointClient.runServiceAction(service.id, actionId);
+                if (result.status === 'error') throw new Error(result.message);
+              })
             }
             onUnload={(model) =>
               void run(`unload-${model}`, () => hardpointClient.ollamaUnload(model))
