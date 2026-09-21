@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { DashboardStatus } from '../../shared/types';
+import type { DashboardStatus, UpdateCheckResult } from '../../shared/types';
 import { hardpointClient, isEmbeddedHttpMode } from '../utils/api';
 
 const POLL_MS = 3000;
@@ -14,10 +14,15 @@ function StatusPill({ ok, label }: { ok: boolean; label: string }) {
   return <span className={`status-pill ${ok ? 'status-ok' : 'status-down'}`}>{label}</span>;
 }
 
+type UpdateUiStatus = 'idle' | 'checking' | UpdateCheckResult['status'];
+
 export function Dashboard() {
   const [status, setStatus] = useState<DashboardStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<UpdateUiStatus>('idle');
+  const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const embedded = isEmbeddedHttpMode();
 
   const refresh = useCallback(async () => {
@@ -35,6 +40,29 @@ export function Dashboard() {
     const id = window.setInterval(() => void refresh(), POLL_MS);
     return () => window.clearInterval(id);
   }, [refresh]);
+
+  useEffect(() => {
+    void hardpointClient.getAppVersion().then(setAppVersion).catch(() => setAppVersion(null));
+  }, []);
+
+  async function handleCheckForUpdates() {
+    setUpdateStatus('checking');
+    setUpdateMessage(null);
+    try {
+      const result = await hardpointClient.checkForUpdates();
+      setUpdateStatus(result.status);
+      if (result.status === 'available') {
+        setUpdateMessage(
+          `Version ${result.version} is available — it will download and install on restart.`
+        );
+      } else if (result.status === 'error' || result.status === 'unsupported') {
+        setUpdateMessage(result.message ?? null);
+      }
+    } catch (e) {
+      setUpdateStatus('error');
+      setUpdateMessage(e instanceof Error ? e.message : String(e));
+    }
+  }
 
   async function runAction(key: string, fn: () => Promise<unknown>) {
     setBusy(key);
@@ -341,6 +369,38 @@ export function Dashboard() {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section className="card">
+        <h2>Updates</h2>
+        <p className="card-meta">
+          {appVersion ? `You're running version ${appVersion}.` : 'Loading version…'}
+        </p>
+        <div className="btn-row">
+          <button
+            type="button"
+            className="btn"
+            disabled={updateStatus === 'checking' || updateStatus === 'unsupported'}
+            onClick={() => void handleCheckForUpdates()}
+          >
+            {updateStatus === 'checking' ? 'Checking…' : 'Check for Updates'}
+          </button>
+        </div>
+        {updateStatus === 'not-available' && <p className="muted">You're up to date.</p>}
+        {updateStatus === 'available' && updateMessage && (
+          <p className="status-ok">{updateMessage}</p>
+        )}
+        {updateStatus === 'error' && updateMessage && (
+          <p className="banner banner-error" style={{ marginTop: 8 }}>
+            Check failed: {updateMessage}
+          </p>
+        )}
+        {updateStatus === 'unsupported' && (
+          <p className="muted">
+            {updateMessage ??
+              'Update checks are only available in a packaged Hardpoint build, not in embeds or dev mode.'}
+          </p>
         )}
       </section>
     </div>

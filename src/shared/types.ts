@@ -87,6 +87,12 @@ export type DirPickerResult =
   | { status: 'cancelled' }
   | { status: 'error'; message: string };
 
+export type UpdateCheckResult =
+  | { status: 'available'; version?: string; message?: string }
+  | { status: 'not-available'; version?: string; message?: string }
+  | { status: 'error'; version?: string; message?: string }
+  | { status: 'unsupported'; version?: string; message?: string };
+
 export interface HardpointApi {
   getStatus: () => Promise<DashboardStatus>;
   ollamaStart: () => Promise<ActionResult>;
@@ -101,4 +107,6 @@ export interface HardpointApi {
   saveService: (service: ManagedService) => Promise<{ status: 'ok' } | { status: 'error'; message: string }>;
   deleteService: (serviceId: string) => Promise<{ status: 'ok' } | { status: 'error'; message: string }>;
   clearCommandLog: () => Promise<{ status: 'ok' }>;
+  getAppVersion: () => Promise<string>;
+  checkForUpdates: () => Promise<UpdateCheckResult>;
 }

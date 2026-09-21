@@ -139,6 +139,17 @@ export const hardpointClient: HardpointApi = {
     if (hasIpc()) return window.hardpoint.clearCommandLog();
     return httpJson('/api/log/clear', { method: 'POST', body: '{}' });
   },
+  getAppVersion: async () => {
+    if (hasIpc()) return window.hardpoint.getAppVersion();
+    return 'embed';
+  },
+  checkForUpdates: async () => {
+    if (hasIpc()) return window.hardpoint.checkForUpdates();
+    return {
+      status: 'unsupported' as const,
+      message: 'Update checks need the Hardpoint desktop window.',
+    };
+  },
 };
 
 export function isEmbeddedHttpMode(): boolean {
