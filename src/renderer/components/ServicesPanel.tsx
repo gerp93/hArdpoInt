@@ -242,16 +242,19 @@ function ServiceCard({
 }) {
   const up = service.reachable === true;
   const down = service.reachable === false;
+  const hasInstall = Boolean(service.workingDir?.trim());
 
-  const visibleActions = service.actions.filter((action) => {
-    const id = action.id.toLowerCase();
-    const label = action.label.toLowerCase();
-    const isStart = id === 'start' || label === 'start';
-    const isStop = id === 'stop' || label === 'stop';
-    if (isStart && up) return false;
-    if (isStop && down) return false;
-    return true;
-  });
+  const visibleActions = hasInstall
+    ? service.actions.filter((action) => {
+        const id = action.id.toLowerCase();
+        const label = action.label.toLowerCase();
+        const isStart = id === 'start' || label === 'start';
+        const isStop = id === 'stop' || label === 'stop';
+        if (isStart && up) return false;
+        if (isStop && down) return false;
+        return true;
+      })
+    : [];
 
   return (
     <div className="service-card">
@@ -277,6 +280,11 @@ function ServiceCard({
           Choose folder
         </button>
       </p>
+      {!hasInstall && (
+        <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+          Choose an install folder before Start / Stop are available.
+        </p>
+      )}
       <div className="btn-row">
         {visibleActions.map((action) => (
           <div key={action.id} className="action-with-cmd">
@@ -291,7 +299,7 @@ function ServiceCard({
             <code className="cmd-preview">{action.commandPreview}</code>
           </div>
         ))}
-        {service.kind === 'ollama' && up && (
+        {service.kind === 'ollama' && hasInstall && up && (
           <button
             type="button"
             className="btn"
