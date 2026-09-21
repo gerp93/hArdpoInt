@@ -310,7 +310,7 @@ function ServiceCard({
       <p className="card-meta folder-line">
         {installMode === 'path' && (
           <>
-            Install: <strong>On PATH</strong>
+            Launch from: <strong>PATH</strong>
             <button
               type="button"
               className="btn btn-sm"
@@ -318,7 +318,7 @@ function ServiceCard({
               title={
                 embedded
                   ? 'Use the Hardpoint desktop window to choose folders'
-                  : 'Switch to an install folder (clears PATH mode)'
+                  : 'Switch to a launch folder (clears PATH mode)'
               }
               onClick={onChooseDir}
             >
@@ -328,7 +328,7 @@ function ServiceCard({
         )}
         {installMode === 'folder' && (
           <>
-            Install: <code className="install-path">{service.workingDir}</code>
+            Launch from: <code className="install-path">{service.workingDir}</code>
             <button
               type="button"
               className="btn btn-sm"
@@ -336,7 +336,7 @@ function ServiceCard({
               title={
                 embedded
                   ? 'Use the Hardpoint desktop window to choose folders'
-                  : 'Pick a different install folder'
+                  : 'Pick a different launch folder'
               }
               onClick={onChooseDir}
             >
@@ -346,7 +346,7 @@ function ServiceCard({
               type="button"
               className="btn btn-sm"
               disabled={!!busy}
-              title="Clear the install folder and start from PATH instead"
+              title="Clear the launch folder and start via PATH instead"
               onClick={onUsePath}
             >
               Use PATH
@@ -355,7 +355,7 @@ function ServiceCard({
         )}
         {installMode === 'unset' && (
           <>
-            Install: <span className="muted">Not set</span>
+            Launch from: <span className="muted">Not set</span>
             <button
               type="button"
               className="btn btn-sm"
@@ -369,7 +369,7 @@ function ServiceCard({
               type="button"
               className="btn btn-sm"
               disabled={!!busy}
-              title="Start without an install folder — use binaries / commands from your PATH"
+              title="Start without a launch folder — use binaries / commands from your PATH"
               onClick={onUsePath}
             >
               Use PATH
@@ -379,7 +379,7 @@ function ServiceCard({
       </p>
       {installMode === 'unset' && (
         <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-          Choose an install folder, or Use PATH, before Start is available. Stop still appears when
+          Choose a launch folder, or Use PATH, before Start is available. Stop still appears when
           the service is reachable.
         </p>
       )}

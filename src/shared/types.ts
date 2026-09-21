@@ -59,10 +59,10 @@ export interface ManagedService {
   hostUrl: string | null;
   /** Extra UI hooks (loaded models, device hint). Presets set this; custom stays generic. */
   kind: 'generic' | 'ollama' | 'chatterbox';
-  /** Install folder for Start, or null when using PATH / not set. */
+  /** Launch folder for Start (cwd / binary location), or null when using PATH / not set. */
   workingDir: string | null;
   /**
-   * When true, Start uses binaries/commands from PATH instead of an install folder.
+   * When true, Start uses binaries/commands from PATH instead of a launch folder.
    * Stop still uses the host port and does not need a folder. Available on every card;
    * Chatterbox Start still needs its portable folder (PATH alone is not enough).
    */
