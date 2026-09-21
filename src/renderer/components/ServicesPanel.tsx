@@ -236,7 +236,10 @@ export function ServicesPanel({
             }
             onUnloadAll={() => void run('unload-all', () => hardpointClient.ollamaUnload())}
             onChooseDir={() => void pickDir(service)}
-            onUsePath={() => void usePath(service)}
+            onUsePath={
+              // Chatterbox is a portable folder layout, not a PATH binary like Ollama.
+              service.kind === 'chatterbox' ? undefined : () => void usePath(service)
+            }
             onRemove={() => void removeService(service.id)}
           />
         ))
@@ -263,7 +266,7 @@ function ServiceCard({
   onUnload: (model: string) => void;
   onUnloadAll: () => void;
   onChooseDir: () => void;
-  onUsePath: () => void;
+  onUsePath?: () => void;
   onRemove: () => void;
 }) {
   const up = service.reachable === true;
@@ -301,11 +304,15 @@ function ServiceCard({
     return hasLaunch;
   });
 
-  const installMode: 'path' | 'folder' | 'unset' = service.usePath
-    ? 'path'
-    : service.workingDir?.trim()
-      ? 'folder'
-      : 'unset';
+  // Treat stale usePath on Chatterbox as unset (PATH is not a valid launch mode).
+  const installMode: 'path' | 'folder' | 'unset' =
+    service.kind === 'chatterbox' && service.usePath && !hasFolder
+      ? 'unset'
+      : service.usePath
+        ? 'path'
+        : hasFolder
+          ? 'folder'
+          : 'unset';
 
   return (
     <div className="service-card">
@@ -320,7 +327,7 @@ function ServiceCard({
         <p className="card-meta">Device (config.yaml): {service.deviceHint}</p>
       )}
       <p className="card-meta folder-line">
-        {installMode === 'path' && (
+        {installMode === 'path' && onUsePath && (
           <>
             Launch from: <strong>PATH</strong>
             <button
@@ -354,15 +361,17 @@ function ServiceCard({
             >
               Change folder
             </button>
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={!!busy}
-              title="Clear the launch folder and start via PATH instead"
-              onClick={onUsePath}
-            >
-              Use PATH
-            </button>
+            {onUsePath && (
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={!!busy}
+                title="Clear the launch folder and start via PATH instead"
+                onClick={onUsePath}
+              >
+                Use PATH
+              </button>
+            )}
           </>
         )}
         {installMode === 'unset' && (
@@ -377,28 +386,25 @@ function ServiceCard({
             >
               Choose folder
             </button>
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={!!busy}
-              title="Start without a launch folder — use binaries / commands from your PATH"
-              onClick={onUsePath}
-            >
-              Use PATH
-            </button>
+            {onUsePath && (
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={!!busy}
+                title="Start without a launch folder — use binaries / commands from your PATH"
+                onClick={onUsePath}
+              >
+                Use PATH
+              </button>
+            )}
           </>
         )}
       </p>
       {installMode === 'unset' && (
         <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-          Choose a launch folder, or Use PATH, before Start is available. Stop still appears when
-          the service is reachable.
-        </p>
-      )}
-      {installMode === 'path' && service.kind === 'chatterbox' && (
-        <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-          Chatterbox Start needs the portable launch folder (python_embedded + start.py). Choose
-          folder to enable Start; Stop still works when it is reachable.
+          {service.kind === 'chatterbox'
+            ? 'Choose the Chatterbox portable folder (python_embedded + start.py) before Start is available. Stop still appears when the service is reachable.'
+            : 'Choose a launch folder, or Use PATH, before Start is available. Stop still appears when the service is reachable.'}
         </p>
       )}
       {hasLaunch &&

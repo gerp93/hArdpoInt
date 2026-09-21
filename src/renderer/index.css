@@ -420,6 +420,11 @@ body {
   color: var(--color-accent-red, #f88);
 }
 
+.cmd-log .cmd-fail .cmd-detail {
+  color: var(--color-accent-red, #f88);
+  opacity: 1;
+}
+
 .cmd-log .cmd-ok code {
   color: inherit;
 }

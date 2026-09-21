@@ -266,13 +266,13 @@ async function runBuiltin(
   }
   if (builtin === 'chatterbox-start') {
     const preview = BUILTIN_PREVIEWS['chatterbox-start'];
-    appendCommandLog({ serviceId, actionId, command: preview, ok: true, detail: 'starting…' });
     if (service?.usePath && !service.workingDir?.trim()) {
       const message =
-        'Chatterbox Start needs the portable install folder (python_embedded + start.py). Choose folder, or clear Use PATH.';
+        'Error: Chatterbox Start needs the portable launch folder (python_embedded + start.py). PATH mode is not supported for Chatterbox — choose a folder.';
       appendCommandLog({ serviceId, actionId, command: preview, ok: false, detail: message });
       return { status: 'error', message };
     }
+    appendCommandLog({ serviceId, actionId, command: preview, ok: true, detail: 'starting…' });
     const result = await startChatterbox();
     appendCommandLog({
       serviceId,
