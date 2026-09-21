@@ -30,10 +30,13 @@ function isLoopbackAddress(address: string | undefined): boolean {
 function corsHeaders(origin: string | undefined): Record<string, string> {
   // This server is loopback-only. Embeds (RolePlaymate / KVGenius) may send a
   // localhost Origin, a null/file Origin when packaged, or none — always allow.
+  // Access-Control-Allow-Private-Network: Chromium's local-network access check
+  // (embed hosts on :5173 → API on :3921) requires it on the preflight.
   const headers: Record<string, string> = {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Origin': origin && origin !== 'null' ? origin : '*',
+    'Access-Control-Allow-Private-Network': 'true',
   };
   return headers;
 }
