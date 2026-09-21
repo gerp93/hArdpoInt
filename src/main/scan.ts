@@ -1,6 +1,8 @@
 import * as net from 'node:net';
 import { SERVICE_PRESETS, scanPortList, type ServicePreset } from '../shared/presets';
+import { loopbackHostKey, loopbackPortFromUrl } from '../shared/loopbackUrl';
 import type { ScanHit } from '../shared/types';
+import { listManagedServices } from './services';
 
 function tcpOpen(port: number, host = '127.0.0.1', timeoutMs = 400): Promise<boolean> {
   return new Promise((resolve) => {
@@ -108,8 +110,16 @@ async function probePort(port: number): Promise<ScanHit | null> {
   };
 }
 
-/** Probe known local AI / tool ports on 127.0.0.1. Does not mutate config. */
+/** Probe known local AI / tool ports on 127.0.0.1. Skips hosts already on the dashboard. */
 export async function scanLocalhostServices(): Promise<ScanHit[]> {
+  const managed = listManagedServices();
+  const addedKeys = new Set(
+    managed.map((s) => loopbackHostKey(s.hostUrl)).filter((k): k is string => Boolean(k))
+  );
+  const addedPorts = new Set(
+    managed.map((s) => loopbackPortFromUrl(s.hostUrl)).filter((p): p is number => p != null)
+  );
+
   const ports = scanPortList();
   const hits: ScanHit[] = [];
   // Parallel but capped — avoid opening dozens of sockets at once.
@@ -118,7 +128,10 @@ export async function scanLocalhostServices(): Promise<ScanHit[]> {
     const chunk = ports.slice(i, i + concurrency);
     const results = await Promise.all(chunk.map((port) => probePort(port)));
     for (const hit of results) {
-      if (hit) hits.push(hit);
+      if (!hit) continue;
+      const key = loopbackHostKey(hit.hostUrl);
+      if ((key && addedKeys.has(key)) || addedPorts.has(hit.port)) continue;
+      hits.push(hit);
     }
   }
   return hits.sort((a, b) => a.port - b.port);

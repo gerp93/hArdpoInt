@@ -12,3 +12,4 @@ Auto Release (`.github/workflows/auto-release.yml`) always does at least a patch
 - 2026-09-21 — install folder XOR Use PATH; scan treats localhost≡127.0.0.1 as already added
 - 2026-09-21 — Kill button on GPU Active/compute (skip Insufficient Permissions rows)
 - 2026-09-21 — hide already-added hosts from scan results
+- 2026-09-21 — filter already-added out of scan API too (port + localhost≡127.0.0.1)

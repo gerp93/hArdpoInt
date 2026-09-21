@@ -4,7 +4,7 @@ import type {
   ScanHit,
   ServicePresetInfo,
 } from '../../shared/types';
-import { loopbackHostKey } from '../../shared/loopbackUrl';
+import { loopbackHostKey, loopbackPortFromUrl } from '../../shared/loopbackUrl';
 import { hardpointClient } from '../utils/api';
 
 function formatMiB(value: number | null | undefined): string {
@@ -124,10 +124,15 @@ export function ServicesPanel({
   const addedUrls = new Set(
     services.map((s) => loopbackHostKey(s.hostUrl)).filter((k): k is string => Boolean(k))
   );
+  const addedPorts = new Set(
+    services.map((s) => loopbackPortFromUrl(s.hostUrl)).filter((p): p is number => p != null)
+  );
 
   const newScanHits = (scanHits ?? []).filter((hit) => {
     const key = loopbackHostKey(hit.hostUrl);
-    return !key || !addedUrls.has(key);
+    if (key && addedUrls.has(key)) return false;
+    if (addedPorts.has(hit.port)) return false;
+    return true;
   });
 
   return (
