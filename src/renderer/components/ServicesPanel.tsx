@@ -225,9 +225,7 @@ export function ServicesPanel({
             }
             onUnloadAll={() => void run('unload-all', () => hardpointClient.ollamaUnload())}
             onChooseDir={() => void pickDir(service)}
-            onUsePath={
-              service.kind === 'ollama' ? () => void usePath(service) : undefined
-            }
+            onUsePath={() => void usePath(service)}
             onRemove={() => void removeService(service.id)}
           />
         ))
@@ -254,7 +252,7 @@ function ServiceCard({
   onUnload: (model: string) => void;
   onUnloadAll: () => void;
   onChooseDir: () => void;
-  onUsePath?: () => void;
+  onUsePath: () => void;
   onRemove: () => void;
 }) {
   const up = service.reachable === true;
@@ -307,12 +305,12 @@ function ServiceCard({
         >
           Choose folder
         </button>
-        {onUsePath && !service.usePath && (
+        {!service.usePath && (
           <button
             type="button"
             className="btn btn-sm"
             disabled={!!busy}
-            title="Start via the ollama binary on your PATH (no install folder)"
+            title="Start without an install folder — use binaries / commands from your PATH"
             onClick={onUsePath}
           >
             Use PATH
@@ -321,8 +319,8 @@ function ServiceCard({
       </p>
       {!hasInstall && (
         <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-          Choose an install folder{onUsePath ? ', or Use PATH,' : ''} before Start is available.
-          Stop still appears when the service is reachable.
+          Choose an install folder, or Use PATH, before Start is available. Stop still appears
+          when the service is reachable.
         </p>
       )}
       <div className="btn-row">

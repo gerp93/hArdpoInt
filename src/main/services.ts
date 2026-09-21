@@ -10,6 +10,8 @@ import {
   getChatterboxLaunchDir,
   setOllamaLaunchDir,
   setChatterboxLaunchDir,
+  clearOllamaLaunchDir,
+  clearChatterboxLaunchDir,
   getEffectiveOllamaHost,
   getEffectiveChatterboxHost,
 } from './config';
@@ -34,14 +36,25 @@ const BUILTIN_PREVIEWS: Record<string, string> = {
 
 function mergeWorkingDirs(services: ManagedService[]): ManagedService[] {
   return services.map((s) => {
-    if (s.kind === 'ollama') {
-      if (s.usePath) {
+    if (s.usePath) {
+      // PATH mode wins over any auto-detected / legacy launch folder.
+      if (s.kind === 'ollama') {
         return {
           ...s,
           workingDir: null,
           hostUrl: s.hostUrl?.trim() || getEffectiveOllamaHost(),
         };
       }
+      if (s.kind === 'chatterbox') {
+        return {
+          ...s,
+          workingDir: null,
+          hostUrl: s.hostUrl?.trim() || getEffectiveChatterboxHost(),
+        };
+      }
+      return { ...s, workingDir: null };
+    }
+    if (s.kind === 'ollama') {
       return {
         ...s,
         workingDir: getOllamaLaunchDir() ?? resolveOllamaLaunchDir() ?? s.workingDir,
@@ -102,17 +115,17 @@ export function saveManagedService(
     actions: Array.isArray(service.actions) ? service.actions : [],
   };
 
-  // Keep legacy launch-dir fields in sync when the user sets workingDir on builtins.
-  if (next.kind === 'ollama') {
-    if (next.usePath) {
-      next.workingDir = null;
-    } else if (next.workingDir?.trim()) {
-      setOllamaLaunchDir(next.workingDir.trim());
-      next.usePath = false;
-    }
-  }
-  if (next.kind === 'chatterbox' && next.workingDir?.trim()) {
+  // Keep legacy launch-dir fields in sync when the user sets workingDir / PATH mode.
+  if (next.usePath) {
+    next.workingDir = null;
+    if (next.kind === 'ollama') clearOllamaLaunchDir();
+    if (next.kind === 'chatterbox') clearChatterboxLaunchDir();
+  } else if (next.kind === 'ollama' && next.workingDir?.trim()) {
+    setOllamaLaunchDir(next.workingDir.trim());
+    next.usePath = false;
+  } else if (next.kind === 'chatterbox' && next.workingDir?.trim()) {
     setChatterboxLaunchDir(next.workingDir.trim());
+    next.usePath = false;
   }
 
   const services = listManagedServices().filter((s) => s.id !== id);
@@ -212,10 +225,11 @@ async function runBuiltin(
   serviceId: string,
   actionId: string
 ): Promise<ActionResult> {
+  const service = listManagedServices().find((s) => s.id === serviceId);
   if (builtin === 'ollama-start') {
     const preview = BUILTIN_PREVIEWS['ollama-start'];
     appendCommandLog({ serviceId, actionId, command: preview, ok: true, detail: 'starting…' });
-    const result = await startOllama();
+    const result = await startOllama({ preferPath: Boolean(service?.usePath) });
     appendCommandLog({
       serviceId,
       actionId,
@@ -253,6 +267,12 @@ async function runBuiltin(
   if (builtin === 'chatterbox-start') {
     const preview = BUILTIN_PREVIEWS['chatterbox-start'];
     appendCommandLog({ serviceId, actionId, command: preview, ok: true, detail: 'starting…' });
+    if (service?.usePath && !service.workingDir?.trim()) {
+      const message =
+        'Chatterbox Start needs the portable install folder (python_embedded + start.py). Choose folder, or clear Use PATH.';
+      appendCommandLog({ serviceId, actionId, command: preview, ok: false, detail: message });
+      return { status: 'error', message };
+    }
     const result = await startChatterbox();
     appendCommandLog({
       serviceId,
@@ -291,8 +311,8 @@ export async function runServiceAction(serviceId: string, actionId: string): Pro
   }
 
   if (runner.type === 'shell') {
-    const cwd = runner.cwd ?? service.workingDir ?? undefined;
-    const result = await runShellCommand(runner.command, cwd ?? undefined);
+    const cwd = service.usePath ? undefined : runner.cwd ?? service.workingDir ?? undefined;
+    const result = await runShellCommand(runner.command, cwd);
     appendCommandLog({
       serviceId,
       actionId,

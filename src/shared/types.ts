@@ -62,8 +62,9 @@ export interface ManagedService {
   /** Install folder for Start, or null when using PATH / not set. */
   workingDir: string | null;
   /**
-   * When true, Start uses the service binary from PATH (e.g. `ollama`) instead of
-   * an install folder. Stop still uses the host port and does not need a folder.
+   * When true, Start uses binaries/commands from PATH instead of an install folder.
+   * Stop still uses the host port and does not need a folder. Available on every card;
+   * Chatterbox Start still needs its portable folder (PATH alone is not enough).
    */
   usePath?: boolean;
   actions: ServiceAction[];

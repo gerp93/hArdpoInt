@@ -173,11 +173,15 @@ async function startOllamaFromPath(
   }
 }
 
-export async function startOllama(): Promise<{ status: 'ok' } | { status: 'error'; message: string }> {
-  const dir = resolveOllamaLaunchDir();
-  if (dir) {
-    if (!getOllamaLaunchDir()) setOllamaLaunchDir(dir);
-    return startOllamaFromDir(dir);
+export async function startOllama(
+  options?: { preferPath?: boolean }
+): Promise<{ status: 'ok' } | { status: 'error'; message: string }> {
+  if (!options?.preferPath) {
+    const dir = resolveOllamaLaunchDir();
+    if (dir) {
+      if (!getOllamaLaunchDir()) setOllamaLaunchDir(dir);
+      return startOllamaFromDir(dir);
+    }
   }
   const onPath =
     (await findExecutableOnPath(ollamaBinaryName())) ??

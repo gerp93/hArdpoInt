@@ -8,3 +8,4 @@ Auto Release (`.github/workflows/auto-release.yml`) always does at least a patch
 - 2026-09-21 — in-app Check for Updates (electron-updater UI, Sweeper pattern)
 - 2026-09-21 — GPU process tabs: Active/compute vs UI & overlays
 - 2026-09-21 — scan/add services (no baked-in Ollama/Comfy cards)
+- 2026-09-21 — Use PATH on every service card (not only Ollama)
