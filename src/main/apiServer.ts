@@ -86,8 +86,10 @@ function serveStaticFile(urlPath: string, res: http.ServerResponse): boolean {
   };
   res.writeHead(200, {
     'Content-Type': types[ext] ?? 'application/octet-stream',
+    // Packaged embeds (RolePlaymate.exe / KVGenius) are file:// ancestors;
+    // http://localhost:* does not cover those. Server is loopback-only, so *.
     ...(ext === '.html'
-      ? { 'Content-Security-Policy': "frame-ancestors 'self' http://127.0.0.1:* http://localhost:*" }
+      ? { 'Content-Security-Policy': "frame-ancestors *" }
       : {}),
   });
   fs.createReadStream(filePath).pipe(res);
@@ -188,7 +190,8 @@ export function startApiServer(): void {
           res.writeHead(302, {
             Location: 'http://127.0.0.1:5174/',
             ...cors,
-            'Content-Security-Policy': "frame-ancestors 'self' http://127.0.0.1:* http://localhost:*",
+            // Same as static HTML — allow file:// host apps to iframe the redirect target.
+            'Content-Security-Policy': "frame-ancestors *",
           });
           res.end();
           return;

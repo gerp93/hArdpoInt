@@ -17,8 +17,8 @@ export default defineConfig({
   server: {
     port: 5174,
     headers: {
-      // RolePlaymate / KVGenius embed this UI in an iframe / WebView.
-      'Content-Security-Policy': "frame-ancestors 'self' http://127.0.0.1:* http://localhost:*",
+      // Host apps may be file:// (packaged Electron) or localhost Vite — allow both.
+      'Content-Security-Policy': "frame-ancestors *",
     },
   },
 });
