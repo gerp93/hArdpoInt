@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { DashboardStatus, UpdateCheckResult } from '../../shared/types';
+import type { DashboardStatus, GpuProcess, UpdateCheckResult } from '../../shared/types';
 import { hardpointClient, isEmbeddedHttpMode } from '../utils/api';
 
 const POLL_MS = 3000;
@@ -12,6 +12,66 @@ function formatMiB(value: number | null | undefined): string {
 
 function StatusPill({ ok, label }: { ok: boolean; label: string }) {
   return <span className={`status-pill ${ok ? 'status-ok' : 'status-down'}`}>{label}</span>;
+}
+
+type GpuProcTab = 'active' | 'ui';
+
+function formatProcessLine(p: GpuProcess): string {
+  const bits = [`PID ${p.pid}`];
+  if (p.type) bits.push(p.type);
+  if (p.smPercent != null) bits.push(`SM ${p.smPercent}%`);
+  if (p.memoryMiB != null) bits.push(formatMiB(p.memoryMiB));
+  return `${p.name} (${bits.join(', ')})`;
+}
+
+function GpuProcessTabs({ processes }: { processes: GpuProcess[] }) {
+  const [tab, setTab] = useState<GpuProcTab>('active');
+  const active = processes.filter((p) => p.kind === 'active');
+  const ui = processes.filter((p) => p.kind === 'ui');
+  const list = tab === 'active' ? active : ui;
+
+  return (
+    <div className="gpu-proc-panel">
+      <div className="gpu-proc-tabs" role="tablist" aria-label="GPU processes">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'active'}
+          className={`gpu-proc-tab${tab === 'active' ? ' active' : ''}`}
+          onClick={() => setTab('active')}
+        >
+          Active / compute ({active.length})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'ui'}
+          className={`gpu-proc-tab${tab === 'ui' ? ' active' : ''}`}
+          onClick={() => setTab('ui')}
+        >
+          UI & overlays ({ui.length})
+        </button>
+      </div>
+      <p className="muted gpu-proc-hint">
+        {tab === 'active'
+          ? 'Processes that look like real GPU work (models, encode, compute). On Windows, WDDM often hides per-process VRAM — names and type are the signal.'
+          : 'Desktop, browser, and overlay clients that hold a GPU context for compositing. They are “on” the GPU but usually idle (0% util).'}
+      </p>
+      {list.length > 0 ? (
+        <ul className="proc-list">
+          {list.map((p) => (
+            <li key={p.pid}>{formatProcessLine(p)}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="muted">
+          {tab === 'active'
+            ? 'Nothing classified as active compute right now.'
+            : 'No UI / overlay clients reported.'}
+        </p>
+      )}
+    </div>
+  );
 }
 
 type UpdateUiStatus = 'idle' | 'checking' | UpdateCheckResult['status'];
@@ -125,18 +185,7 @@ export function Dashboard() {
                 </span>
               </div>
             </div>
-            {gpu.processes.length > 0 ? (
-              <ul className="proc-list">
-                {gpu.processes.map((p) => (
-                  <li key={p.pid}>
-                    {p.name} (PID {p.pid}
-                    {p.memoryMiB != null ? `, ${formatMiB(p.memoryMiB)}` : ''})
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted">No compute processes reported by nvidia-smi.</p>
-            )}
+            <GpuProcessTabs processes={gpu.processes} />
           </>
         )}
       </section>

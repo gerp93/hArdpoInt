@@ -1,7 +1,17 @@
 export interface GpuProcess {
   pid: number;
   name: string;
+  /** WDDM on Windows usually cannot report this (null / N/A). */
   memoryMiB: number | null;
+  /** From nvidia-smi pmon: C = compute, G = graphics, C+G = both. */
+  type: 'C' | 'G' | 'C+G' | null;
+  /** SM busy % from pmon when the driver reports it (often unavailable on WDDM). */
+  smPercent: number | null;
+  /**
+   * active = likely real GPU work (models, encode, compute).
+   * ui = desktop / browser / overlay clients that hold a GPU context idle.
+   */
+  kind: 'active' | 'ui';
 }
 
 export interface GpuSnapshot {

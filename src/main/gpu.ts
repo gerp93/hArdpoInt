@@ -34,10 +34,96 @@ function parseNumber(value: string): number | null {
 
 /** Basename for display; keep full path in name for clarity when useful. */
 function displayProcessName(raw: string): string {
-  const trimmed = raw.trim();
+  const trimmed = raw.trim().replace(/\u0000/g, '');
   if (!trimmed) return trimmed;
   const parts = trimmed.split(/[/\\]/);
   return parts[parts.length - 1] || trimmed;
+}
+
+function parseProcessType(raw: string): GpuProcess['type'] {
+  const t = raw.trim().toUpperCase();
+  if (t === 'C' || t === 'G' || t === 'C+G') return t;
+  return null;
+}
+
+/**
+ * Desktop / overlay clients that hold a WDDM GPU context for compositing
+ * without meaningfully driving utilization. Matched against basename.
+ */
+const UI_NAME_RE =
+  /^(explorer|dwm|sihost|shellexperiencehost|shellhost|searchhost|startmenuexperiencehost|textinputhost|applicationframehost|systemsettings|lockapp|crossdeviceresume|searchapp|widgetservice|widgets|gamebar|gamingservices|msedgewebview2|microsoft\.cmdpal\.ui|powertoys[\w.]*|logi[\w.]*|lghub[\w.]*|streamdeck|lgmonitorappmanager|nvidia[\w.]*|nvcontainer|nvdisplay|securityhealthsystray|taskmgr|chnotificationux|phoneexperiencehost)\.exe$/i;
+
+/**
+ * Names that usually mean real GPU work even when WDDM hides VRAM/SM stats.
+ */
+const ACTIVE_NAME_RE =
+  /^(ollama[\w.]*|llama[\w.]*|python[\w.]*|pythonw|comfyui[\w.]*|ffmpeg|handbrake|obs[\w.]*|blender|davinci|unity|unreal|nvenc|cuda[\w.]*)/i;
+
+const ACTIVE_MEMORY_MIB = 64;
+
+function classifyProcess(input: {
+  name: string;
+  type: GpuProcess['type'];
+  memoryMiB: number | null;
+  smPercent: number | null;
+}): GpuProcess['kind'] {
+  if (input.smPercent != null && input.smPercent > 0) return 'active';
+  if (input.memoryMiB != null && input.memoryMiB >= ACTIVE_MEMORY_MIB) return 'active';
+  if (input.type === 'C') return 'active';
+
+  const base = displayProcessName(input.name);
+  if (ACTIVE_NAME_RE.test(base)) return 'active';
+  if (UI_NAME_RE.test(base)) return 'ui';
+
+  // Browsers / Electron shells: UI unless they already tripped memory/SM above.
+  if (
+    /^(chrome|msedge|opera|firefox|brave|cursor|code|hardpoint|roleplaymate|kvgenius|discord|slack|spotify|steam|epicgameslauncher)\.exe$/i.test(
+      base
+    )
+  ) {
+    return 'ui';
+  }
+
+  // Unknown C+G / G with no stats → UI noise on Windows; unknown bare C already handled.
+  if (input.type === 'G' || input.type === 'C+G') return 'ui';
+
+  // Unknown with no type: keep on Active so we don't hide a surprise consumer.
+  return 'active';
+}
+
+interface PmonRow {
+  pid: number;
+  type: GpuProcess['type'];
+  smPercent: number | null;
+  name: string;
+}
+
+/** One sample of nvidia-smi pmon (type + SM% when the driver exposes it). */
+async function readPmonRows(): Promise<Map<number, PmonRow>> {
+  const map = new Map<number, PmonRow>();
+  try {
+    const out = await run('nvidia-smi', ['pmon', '-c', '1']);
+    for (const line of out.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      // gpu pid type sm mem enc dec [jpg ofa] command…
+      const parts = trimmed.split(/\s+/);
+      if (parts.length < 5) continue;
+      const pid = parseNumber(parts[1] ?? '');
+      if (pid == null) continue;
+      const type = parseProcessType(parts[2] ?? '');
+      const smRaw = parts[3] ?? '-';
+      const smPercent = smRaw === '-' ? null : parseNumber(smRaw);
+      // Older pmon: gpu pid type sm mem enc dec command
+      // Newer:      gpu pid type sm mem enc dec jpg ofa command
+      const nameStart = parts.length >= 10 ? 9 : 7;
+      const name = displayProcessName(parts.slice(nameStart).join(' ') || 'unknown');
+      map.set(pid, { pid, type, smPercent, name });
+    }
+  } catch {
+    // pmon unavailable — fall back to compute-apps only
+  }
+  return map;
 }
 
 export async function getGpuSnapshot(): Promise<GpuSnapshot> {
@@ -56,7 +142,28 @@ export async function getGpuSnapshot(): Promise<GpuSnapshot> {
     const utilizationGpu = parts[3] != null ? parseNumber(parts[3]) : null;
     const temperatureC = parts[4] != null ? parseNumber(parts[4]) : null;
 
-    let processes: GpuProcess[] = [];
+    const pmonByPid = await readPmonRows();
+    const byPid = new Map<number, GpuProcess>();
+
+    // Seed from pmon (has type / SM%).
+    for (const row of pmonByPid.values()) {
+      const kind = classifyProcess({
+        name: row.name,
+        type: row.type,
+        memoryMiB: null,
+        smPercent: row.smPercent,
+      });
+      byPid.set(row.pid, {
+        pid: row.pid,
+        name: row.name,
+        memoryMiB: null,
+        type: row.type,
+        smPercent: row.smPercent,
+        kind,
+      });
+    }
+
+    // Merge compute-apps for VRAM when the driver reports it (Linux / TCC).
     try {
       const procCsv = await run('nvidia-smi', [
         '--query-compute-apps=pid,process_name,used_gpu_memory',
@@ -67,18 +174,47 @@ export async function getGpuSnapshot(): Promise<GpuSnapshot> {
         if (!trimmed) continue;
         const cols = trimmed.split(',').map((p) => p.trim());
         const pid = parseNumber(cols[0] ?? '');
-        const procName = cols[1] ?? '';
+        const procName = displayProcessName(cols[1] ?? '');
         if (pid == null || !procName) continue;
-        processes.push({
-          pid,
-          name: displayProcessName(procName),
-          memoryMiB: cols[2] != null ? parseNumber(cols[2]) : null,
-        });
+        const memoryRaw = cols[2] ?? '';
+        const memoryMiB =
+          memoryRaw && memoryRaw !== '[N/A]' && memoryRaw.toUpperCase() !== 'N/A'
+            ? parseNumber(memoryRaw)
+            : null;
+
+        const existing = byPid.get(pid);
+        if (existing) {
+          existing.memoryMiB = memoryMiB ?? existing.memoryMiB;
+          if (!existing.name || existing.name === '[Insufficient Permissions]') {
+            existing.name = procName;
+          }
+          existing.kind = classifyProcess({
+            name: existing.name,
+            type: existing.type,
+            memoryMiB: existing.memoryMiB,
+            smPercent: existing.smPercent,
+          });
+        } else {
+          const type = null;
+          const smPercent = null;
+          byPid.set(pid, {
+            pid,
+            name: procName,
+            memoryMiB,
+            type,
+            smPercent,
+            kind: classifyProcess({ name: procName, type, memoryMiB, smPercent }),
+          });
+        }
       }
-      processes.sort((a, b) => (b.memoryMiB ?? 0) - (a.memoryMiB ?? 0));
     } catch {
       // compute-apps query can fail when nothing is running
     }
+
+    const processes = [...byPid.values()].sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind === 'active' ? -1 : 1;
+      return (b.memoryMiB ?? 0) - (a.memoryMiB ?? 0) || a.name.localeCompare(b.name);
+    });
 
     return {
       available: true,

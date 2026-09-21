@@ -209,6 +209,37 @@ body {
   font-size: 0.85rem;
 }
 
+.gpu-proc-panel {
+  margin-top: 0.85rem;
+}
+
+.gpu-proc-tabs {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.gpu-proc-tab {
+  background: transparent;
+  color: var(--color-text, #eee);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.gpu-proc-tab.active {
+  border-color: var(--color-accent-green, #52b788);
+  background: rgba(82, 183, 136, 0.18);
+}
+
+.gpu-proc-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
