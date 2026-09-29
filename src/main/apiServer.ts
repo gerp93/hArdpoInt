@@ -18,6 +18,11 @@ import type { Mount } from '../shared/types';
 const API_HOST = '127.0.0.1';
 const API_PORT = 3921;
 
+// `*` alone matches only network schemes (http/https/ws/wss), NOT file:// — and packaged
+// host apps (RolePlaymate.exe / KVGenius) load their renderer from file://, so `file:` must
+// be listed explicitly or Chromium refuses to frame the UI. Server is loopback-only.
+const FRAME_ANCESTORS_CSP = 'frame-ancestors * file:';
+
 function isLoopbackAddress(address: string | undefined): boolean {
   if (!address) return false;
   const normalized = address.replace(/^::ffff:/i, '');
@@ -83,11 +88,7 @@ function serveStaticFile(urlPath: string, res: http.ServerResponse): boolean {
   };
   res.writeHead(200, {
     'Content-Type': types[ext] ?? 'application/octet-stream',
-    // Packaged embeds (RolePlaymate.exe / KVGenius) are file:// ancestors;
-    // http://localhost:* does not cover those. Server is loopback-only, so *.
-    ...(ext === '.html'
-      ? { 'Content-Security-Policy': "frame-ancestors *" }
-      : {}),
+    ...(ext === '.html' ? { 'Content-Security-Policy': FRAME_ANCESTORS_CSP } : {}),
   });
   fs.createReadStream(filePath).pipe(res);
   return true;
@@ -196,7 +197,7 @@ export function startApiServer(): void {
             Location: 'http://127.0.0.1:5174/',
             ...cors,
             // Same as static HTML — allow file:// host apps to iframe the redirect target.
-            'Content-Security-Policy': "frame-ancestors *",
+            'Content-Security-Policy': FRAME_ANCESTORS_CSP,
           });
           res.end();
           return;

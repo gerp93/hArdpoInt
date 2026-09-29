@@ -17,8 +17,9 @@ export default defineConfig({
   server: {
     port: 5174,
     headers: {
-      // Host apps may be file:// (packaged Electron) or localhost Vite — allow both.
-      'Content-Security-Policy': "frame-ancestors *",
+      // Host apps may be file:// (packaged Electron) or localhost Vite. `*` does not match
+      // file://, so it has to be listed explicitly.
+      'Content-Security-Policy': 'frame-ancestors * file:',
     },
   },
 });
