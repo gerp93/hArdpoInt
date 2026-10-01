@@ -113,6 +113,33 @@
     }
   },
   {
+    "id": "seed-wreckfest2",
+    "name": "Wreckfest 2 Dedicated Server",
+    "description": "UDP game server run from the wf2s repo (scripts\\start.ps1). Choose that repo as the launch folder.",
+    "mount": {
+      "id": "wreckfest2",
+      "name": "Wreckfest 2 Server",
+      "hostUrl": null,
+      "launch": { "mode": "unset", "cwd": null },
+      "start": {
+        "type": "shell",
+        "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\start.ps1",
+        "preview": "powershell scripts\\start.ps1 (generates config, runs server\\Wreckfest2.exe --server)",
+        "cwdRequired": true
+      },
+      "stop": {
+        "type": "process",
+        "preview": "kill processes running from the launch folder (not your game client)"
+      },
+      "probe": { "type": "process" },
+      "help": {
+        "when": "launchUnset",
+        "text": "Choose the folder that contains scripts\\start.ps1 (the wf2s repo) as the launch folder."
+      },
+      "panels": []
+    }
+  },
+  {
     "id": "seed-custom",
     "name": "Custom HTTP service",
     "description": "Any loopback URL — you define Start in the stepper or JSON.",

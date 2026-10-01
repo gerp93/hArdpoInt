@@ -1,5 +1,5 @@
 import type { DashboardMount, MountPanel } from '../../shared/mountSchema';
-import { canStartMount, getByPath, resolveHelpText } from '../../shared/mountSchema';
+import { canStartMount, getByPath, resolveHelpText, statusLabel } from '../../shared/mountSchema';
 
 function formatMiB(value: number | null | undefined): string {
   if (value == null) return '—';
@@ -61,7 +61,7 @@ export function MountCard({
       <div className="card-header">
         <h3>{mount.name}</h3>
         {mount.reachable != null && (
-          <StatusPill ok={mount.reachable} label={mount.reachable ? 'Reachable' : 'Down'} />
+          <StatusPill ok={mount.reachable} label={statusLabel(mount, mount.reachable)} />
         )}
       </div>
       {mount.hostUrl && <p className="card-meta">{mount.hostUrl}</p>}
@@ -111,7 +111,10 @@ export function MountCard({
             <button type="button" className="btn" disabled={!!busy} onClick={onStop}>
               Stop
             </button>
-            <code className="cmd-preview">{mount.stop?.preview ?? `port ${mount.stop?.port}`}</code>
+            <code className="cmd-preview">
+              {mount.stop?.preview ??
+                (mount.stop?.type === 'port' ? `port ${mount.stop.port}` : mount.stop?.type)}
+            </code>
           </div>
         )}
         <button type="button" className="btn btn-sm" disabled={!!busy} onClick={onEdit}>

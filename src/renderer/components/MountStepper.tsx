@@ -41,7 +41,7 @@ export function MountStepper({
 
   useEffect(() => {
     let cancelled = false;
-    const url = draft.hostUrl?.trim();
+    const url = draft.probe ? null : draft.hostUrl?.trim();
     if (!url) {
       setProbe(null);
       return;
@@ -62,7 +62,7 @@ export function MountStepper({
       cancelled = true;
       window.clearTimeout(t);
     };
-  }, [draft.hostUrl]);
+  }, [draft.hostUrl, draft.probe]);
 
   function applyJson(): boolean {
     const parsed = parseMountJson(jsonText);
@@ -184,10 +184,55 @@ export function MountStepper({
                   placeholder="http://127.0.0.1:11434"
                 />
               </label>
-              <p className="muted">
-                Probe:{' '}
-                {probe == null ? '—' : probe ? 'Reachable' : 'Down'}
-              </p>
+              <label className="field">
+                Status check
+                <select
+                  value={draft.probe?.type ?? 'http'}
+                  onChange={(e) => {
+                    const type = e.target.value;
+                    setDraft({
+                      ...draft,
+                      probe:
+                        type === 'process'
+                          ? { type: 'process' }
+                          : type === 'tcp'
+                            ? { type: 'tcp', port: portFromHostUrl(draft.hostUrl, 8080) }
+                            : null,
+                    });
+                  }}
+                >
+                  <option value="http">HTTP request to Host URL</option>
+                  <option value="tcp">TCP port open</option>
+                  <option value="process">Process running from launch folder</option>
+                </select>
+              </label>
+              {draft.probe?.type === 'tcp' && (
+                <label className="field">
+                  TCP port
+                  <input
+                    type="number"
+                    value={draft.probe.port}
+                    onChange={(e) => {
+                      const port = Number(e.target.value);
+                      setDraft({
+                        ...draft,
+                        probe: { type: 'tcp', port: Number.isFinite(port) ? port : 8080 },
+                      });
+                    }}
+                  />
+                </label>
+              )}
+              {draft.probe?.type === 'process' && (
+                <p className="muted">
+                  Up when any process&apos;s executable lives under the launch folder. Good for UDP
+                  game servers that have no HTTP endpoint.
+                </p>
+              )}
+              {!draft.probe && (
+                <p className="muted">
+                  Probe: {probe == null ? '—' : probe ? 'Reachable' : 'Down'}
+                </p>
+              )}
             </div>
           )}
 
@@ -286,28 +331,63 @@ export function MountStepper({
           {step === 'Stop' && (
             <div className="stepper-body">
               <label className="field">
-                Stop port
-                <input
-                  type="number"
-                  value={
-                    draft.stop?.type === 'port'
-                      ? draft.stop.port ?? portFromHostUrl(draft.hostUrl, 8080)
-                      : portFromHostUrl(draft.hostUrl, 8080)
-                  }
+                Stop method
+                <select
+                  value={draft.stop?.type ?? 'port'}
                   onChange={(e) => {
-                    const port = Number(e.target.value);
+                    const type = e.target.value;
                     setDraft({
                       ...draft,
-                      stop: {
-                        type: 'port',
-                        port: Number.isFinite(port) ? port : 8080,
-                        preview: draft.stop?.preview,
-                        afterShell: draft.stop?.afterShell,
-                      },
+                      stop:
+                        type === 'process'
+                          ? { type: 'process', preview: draft.stop?.preview }
+                          : type === 'shell'
+                            ? draft.stop?.type === 'shell'
+                              ? draft.stop
+                              : null
+                            : {
+                                type: 'port',
+                                port: portFromHostUrl(draft.hostUrl, 8080),
+                                preview: draft.stop?.preview,
+                              },
                     });
                   }}
-                />
+                >
+                  <option value="port">Kill what is listening on a TCP port</option>
+                  <option value="process">Kill processes running from launch folder</option>
+                  {draft.stop?.type === 'shell' && <option value="shell">Shell command</option>}
+                </select>
               </label>
+              {draft.stop?.type === 'shell' && (
+                <p className="muted">
+                  Shell stop command: <code>{draft.stop.command}</code> (edit in Mount JSON).
+                </p>
+              )}
+              {draft.stop?.type !== 'process' && draft.stop?.type !== 'shell' && (
+                <label className="field">
+                  Stop port
+                  <input
+                    type="number"
+                    value={
+                      draft.stop?.type === 'port'
+                        ? draft.stop.port ?? portFromHostUrl(draft.hostUrl, 8080)
+                        : portFromHostUrl(draft.hostUrl, 8080)
+                    }
+                    onChange={(e) => {
+                      const port = Number(e.target.value);
+                      setDraft({
+                        ...draft,
+                        stop: {
+                          type: 'port',
+                          port: Number.isFinite(port) ? port : 8080,
+                          preview: draft.stop?.preview,
+                          afterShell: draft.stop?.afterShell,
+                        },
+                      });
+                    }}
+                  />
+                </label>
+              )}
               <label className="field">
                 Preview (optional)
                 <input

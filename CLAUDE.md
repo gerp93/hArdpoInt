@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Hardpoint is a self-contained Electron + Vite + React app that monitors and
-controls local AI services (Ollama, Chatterbox, GPU/CPU load). Source of truth:
+controls local AI and tool servers (Ollama, Chatterbox, even a Wreckfest 2 server) and GPU/CPU load. Source of truth:
 https://github.com/gerp93/hArdpoInt
 
 ## Commands

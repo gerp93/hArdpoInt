@@ -18,13 +18,21 @@ export interface MountStart {
 }
 
 export interface MountStop {
-  type: 'port' | 'shell';
+  /** `process` kills every process whose executable lives under launch.cwd. */
+  type: 'port' | 'shell' | 'process';
   port?: number;
   command?: string;
   preview?: string;
   /** Optional shell commands run after a successful port stop (e.g. tray cleanup). */
   afterShell?: string[];
 }
+
+/**
+ * How a card decides it is up. Omitted (null) = HTTP GET on hostUrl.
+ * `process` = any process whose executable lives under launch.cwd (matches by path, not image
+ * name, so a game server does not collide with the same exe name installed elsewhere).
+ */
+export type MountProbe = { type: 'process' } | { type: 'tcp'; port: number };
 
 export interface MountHelp {
   when: 'startMissing' | 'launchUnset' | 'always';
@@ -75,6 +83,7 @@ export interface Mount {
   launch: MountLaunch;
   start: MountStart | null;
   stop: MountStop | null;
+  probe: MountProbe | null;
   help: MountHelp | null;
   panels: MountPanel[];
 }
@@ -104,6 +113,7 @@ export function blankMount(partial?: Partial<Mount>): Mount {
     launch: partial?.launch ?? { mode: 'unset', cwd: null },
     start: partial?.start ?? null,
     stop: partial?.stop ?? null,
+    probe: partial?.probe ?? null,
     help: partial?.help ?? null,
     panels: partial?.panels ?? [],
   };
@@ -146,6 +156,9 @@ function asStop(raw: unknown): MountStop | null {
         : undefined,
     };
   }
+  if (raw.type === 'process') {
+    return { type: 'process', preview: typeof raw.preview === 'string' ? raw.preview : undefined };
+  }
   if (raw.type === 'shell') {
     const command = typeof raw.command === 'string' ? raw.command.trim() : '';
     if (!command) return null;
@@ -154,6 +167,17 @@ function asStop(raw: unknown): MountStop | null {
       command,
       preview: typeof raw.preview === 'string' ? raw.preview : undefined,
     };
+  }
+  return null;
+}
+
+function asProbe(raw: unknown): MountProbe | null {
+  if (!isRecord(raw)) return null;
+  if (raw.type === 'process') return { type: 'process' };
+  if (raw.type === 'tcp') {
+    const port = typeof raw.port === 'number' ? raw.port : Number(raw.port);
+    if (!Number.isInteger(port) || port <= 0 || port > 65535) return null;
+    return { type: 'tcp', port };
   }
   return null;
 }
@@ -242,6 +266,7 @@ export function normalizeMount(raw: unknown): Mount | null {
     launch: asLaunch(raw.launch),
     start: asStart(raw.start),
     stop: asStop(raw.stop),
+    probe: asProbe(raw.probe),
     help: asHelp(raw.help),
     panels,
   };
@@ -360,6 +385,7 @@ export function migrateLegacyService(raw: unknown): Mount | null {
               ]
             : undefined,
       },
+      probe: null,
       help: null,
       panels: [
         {
@@ -419,6 +445,7 @@ export function migrateLegacyService(raw: unknown): Mount | null {
         port: portFromHostUrl(hostUrl, 8004),
         preview: 'taskkill listeners on Chatterbox port + processes under launch folder',
       },
+      probe: null,
       help: {
         when: 'launchUnset',
         text: 'Choose a launch folder before Start is available. Stop still appears when the service is reachable.',
@@ -470,6 +497,7 @@ export function migrateLegacyService(raw: unknown): Mount | null {
     launch,
     start,
     stop,
+    probe: null,
     help: start
       ? null
       : {
@@ -478,6 +506,12 @@ export function migrateLegacyService(raw: unknown): Mount | null {
         },
     panels: [],
   };
+}
+
+/** Status-pill wording: process probes say Running/Stopped, network probes Reachable/Down. */
+export function statusLabel(mount: Pick<Mount, 'probe'>, up: boolean): string {
+  if (mount.probe?.type === 'process') return up ? 'Running' : 'Stopped';
+  return up ? 'Reachable' : 'Down';
 }
 
 export function canStartMount(mount: Mount): boolean {
