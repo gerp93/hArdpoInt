@@ -23,6 +23,8 @@ export interface AgentApi {
   approve: (requestId: string, allow: boolean) => Promise<void>;
   /** Run the bundled Claude's browser sign-in. */
   login: () => Promise<void>;
+  /** Hand the code shown in the browser back to the sign-in process. */
+  submitLoginCode: (code: string) => Promise<void>;
   authStatus: () => Promise<{ loggedIn: boolean }>;
   getWorkspace: () => Promise<string>;
   chooseWorkspace: () => Promise<{ status: 'ok'; dir: string } | { status: 'cancelled' }>;
