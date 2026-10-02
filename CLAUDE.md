@@ -16,7 +16,7 @@ npm run package  # electron-builder → release/
 
 ## Architecture
 
-- `src/main/` — Electron main: `main.ts` (window, IPC, menu, updater), `config.ts` (BOM-safe `app-config.json` in userData), `ollama.ts` / `chatterbox.ts` (HTTP to local servers), `launch.ts` (start/stop, folder pickers), `gpu.ts` (`nvidia-smi`), `localServerProcess.ts` (port/process stop), `apiServer.ts` (127.0.0.1:3921 only, CORS for localhost).
+- `src/main/` — Electron main: `main.ts` (window, IPC, menu, updater), `config.ts` (BOM-safe `app-config.json` in userData), `ollama.ts` / `chatterbox.ts` (HTTP to local servers), `launch.ts` (start/stop, folder pickers), `gpu.ts` (`nvidia-smi`), `localServerProcess.ts` (port/process stop), `agent/` (in-app Assistant: `sdk.ts` loads the ESM-only Claude Agent SDK and its bundled `claude` binary, `tools.ts` in-process mount tools, `session.ts` streaming + approvals + sign-in, `prompt.ts`), `apiServer.ts` (127.0.0.1:3921 only, CORS for localhost).
 - `src/renderer/` — Single-page dashboard (`Dashboard.tsx`), VisualAssault themes (`themes.css` vendored), `hardpoint-theme` in localStorage.
 - `src/shared/types.ts` — `DashboardStatus` and IPC/API shapes.
 

@@ -6,6 +6,14 @@ Local dashboard for **local AI / tool servers** and **NVIDIA GPU** status on thi
 
 This repo follows the shared conventions in [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards) (theming, release/CI, update-check, licensing, logo/branding) — see that repo for the rules this one is expected to keep up with.
 
+## Assistant
+
+The floating **Assistant** button (desktop window only) opens a chat where you say which server you want to run. It researches the install, works out the start command, port, status check and stop method, and — after you approve — saves the mount so you only click Start next time.
+
+- Runs on the Claude binary bundled with Hardpoint; use **Sign in** once (opens your browser, Hardpoint never sees your password).
+- Every shell command, file write, page fetch, and mount save/start/stop asks for your approval. Reading files is limited to its workspace unless you approve more.
+- It works in a workspace folder (default `Documents\Hardpoint`, changeable in the chat).
+
 ## Development
 
 ```

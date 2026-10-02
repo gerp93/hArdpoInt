@@ -50,6 +50,9 @@ export type {
 } from './mountSchema';
 
 import type { DashboardMount, Mount, MountTemplateInfo } from './mountSchema';
+import type { AgentApi } from './agentTypes';
+
+export type { AgentApi, AgentEvent } from './agentTypes';
 
 /** One open loopback port found by scan (not yet added to the dashboard). */
 export interface ScanHit {
@@ -115,4 +118,6 @@ export interface HardpointApi {
   killGpuProcess: (pid: number) => Promise<ActionResult>;
   getAppVersion: () => Promise<string>;
   checkForUpdates: () => Promise<UpdateCheckResult>;
+  /** In-app assistant. Only present in the desktop window (not the HTTP embed). */
+  agent?: AgentApi;
 }

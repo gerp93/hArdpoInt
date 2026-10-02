@@ -15,6 +15,8 @@ import {
   saveMount,
 } from './services';
 import { scanLocalhostServices } from './scan';
+import { AgentSession } from './agent/session';
+import { readConfig, writeConfig } from './config';
 import type { Mount, UpdateCheckResult } from '../shared/types';
 
 app.setName(app.isPackaged ? 'hardpoint' : 'hardpoint-dev');
@@ -24,6 +26,18 @@ const REPO_URL = 'https://github.com/gerp93/hArdpoInt';
 const ISSUES_URL = `${REPO_URL}/issues`;
 
 let mainWindow: BrowserWindow | null = null;
+let agent: AgentSession | null = null;
+
+function getAgent(): AgentSession {
+  if (!agent) {
+    agent = new AgentSession((event) => mainWindow?.webContents.send('agent:event', event));
+  }
+  return agent;
+}
+
+function agentWorkspace(): string {
+  return readConfig().agentWorkspace?.trim() || path.join(app.getPath('documents'), 'Hardpoint');
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -170,6 +184,24 @@ function registerIpc(): void {
   ipcMain.handle('hardpoint:killGpuProcess', (_event, pid: number) => killActiveGpuProcess(pid));
   ipcMain.handle('hardpoint:getAppVersion', () => app.getVersion());
   ipcMain.handle('hardpoint:checkForUpdates', () => checkForUpdatesNow());
+
+  ipcMain.handle('agent:send', (_event, text: string) =>
+    getAgent().send(String(text ?? ''), agentWorkspace())
+  );
+  ipcMain.handle('agent:interrupt', () => getAgent().interrupt());
+  ipcMain.handle('agent:reset', () => getAgent().reset());
+  ipcMain.handle('agent:approve', (_event, requestId: string, allow: boolean) =>
+    getAgent().approve(String(requestId), Boolean(allow))
+  );
+  ipcMain.handle('agent:login', () => getAgent().login());
+  ipcMain.handle('agent:authStatus', () => getAgent().authStatus());
+  ipcMain.handle('agent:getWorkspace', () => agentWorkspace());
+  ipcMain.handle('agent:chooseWorkspace', async () => {
+    const pick = await chooseMountDir(mainWindow);
+    if (pick.status !== 'ok') return { status: 'cancelled' as const };
+    writeConfig({ ...readConfig(), agentWorkspace: pick.dir });
+    return { status: 'ok' as const, dir: pick.dir };
+  });
 }
 
 /** Silent background check on launch; prompts when a download finishes. */
@@ -262,5 +294,6 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  agent?.dispose();
   stopApiServer();
 });

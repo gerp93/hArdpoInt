@@ -15,6 +15,8 @@ export interface AppConfig {
   /** Legacy services array — migrated into mounts then cleared. */
   services?: unknown[];
   mountsMigrated?: boolean;
+  /** Folder the in-app assistant works in (installs, clones, scripts). */
+  agentWorkspace?: string;
 }
 
 function getConfigPath(): string {
