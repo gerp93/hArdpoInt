@@ -13,7 +13,7 @@ import {
 } from '../shared/mountSchema';
 import { appendCommandLog } from './commandLog';
 import { getSeedsPath, readMounts, writeMounts } from './config';
-import { stopLocalServer } from './localServerProcess';
+import { stopLocalServer, stopProcessesUnder } from './localServerProcess';
 
 export function listMounts(): Mount[] {
   return readMounts();
@@ -42,11 +42,7 @@ export function listMountTemplates(): MountTemplateInfo[] {
     id: s.id,
     name: s.name,
     description: s.description,
-    defaultHostUrl:
-      (normalizeMount(s.mount)?.hostUrl ??
-        (typeof (s.mount as { hostUrl?: string })?.hostUrl === 'string'
-          ? (s.mount as { hostUrl: string }).hostUrl
-          : 'http://127.0.0.1:8080')) || 'http://127.0.0.1:8080',
+    defaultHostUrl: normalizeMount(s.mount)?.hostUrl ?? '',
   }));
 }
 
@@ -304,6 +300,22 @@ export async function runMountAction(
       return result.ok
         ? { status: 'ok', commands: [result.preview] }
         : { status: 'error', message: result.detail, commands: [result.preview] };
+    }
+
+    if (mount.stop.type === 'process') {
+      const cmd = mount.stop.preview ?? 'kill processes running from the launch folder';
+      appendCommandLog({ serviceId: mountId, actionId: 'stop', command: cmd, ok: true, detail: 'running…' });
+      const result = await stopProcessesUnder(mount.launch.cwd);
+      appendCommandLog({
+        serviceId: mountId,
+        actionId: 'stop',
+        command: cmd,
+        ok: result.status === 'ok',
+        detail: result.status === 'error' ? result.message : 'ok',
+      });
+      return result.status === 'ok'
+        ? { status: 'ok', commands: [cmd] }
+        : { status: 'error', message: result.message, commands: [cmd] };
     }
 
     const port = mount.stop.port ?? portFromHostUrl(mount.hostUrl, 8080);

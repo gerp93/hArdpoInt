@@ -167,7 +167,7 @@ export function ServicesPanel({
             >
               <strong>{tpl.name}</strong>
               <span className="muted">{tpl.description}</span>
-              <code>{tpl.defaultHostUrl}</code>
+              {tpl.defaultHostUrl && <code>{tpl.defaultHostUrl}</code>}
             </button>
           ))}
           {templates.length === 0 && (

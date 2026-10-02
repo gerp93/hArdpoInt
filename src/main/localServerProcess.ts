@@ -99,6 +99,74 @@ async function pidsWithExecutableUnder(dir: string): Promise<number[]> {
   return pids;
 }
 
+interface ProcessEntry {
+  pid: number;
+  /** Executable path on Windows; full command line elsewhere (only ever prefix-matched). */
+  exe: string;
+}
+
+const PROCESS_CACHE_MS = 2_000;
+let processCache: { at: number; entries: Promise<ProcessEntry[]> } | null = null;
+
+async function listProcessEntries(): Promise<ProcessEntry[]> {
+  if (process.platform === 'win32') {
+    const script =
+      'Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath } | ' +
+      'ForEach-Object { "$($_.ProcessId)|$($_.ExecutablePath)" }';
+    const stdout = await run('powershell.exe', ['-NoProfile', '-Command', script], 15_000).catch(
+      () => ''
+    );
+    return stdout.split(/\r?\n/).flatMap((line) => {
+      const sep = line.indexOf('|');
+      const pid = Number(line.slice(0, sep));
+      return sep > 0 && Number.isInteger(pid) && pid > 0
+        ? [{ pid, exe: line.slice(sep + 1).trim() }]
+        : [];
+    });
+  }
+  const stdout = await run('ps', ['-eo', 'pid=,command=']).catch(() => '');
+  return stdout.split(/\n/).flatMap((line) => {
+    const match = line.trim().match(/^(\d+)\s+(.*)$/);
+    return match ? [{ pid: Number(match[1]), exe: match[2] }] : [];
+  });
+}
+
+/**
+ * PIDs whose executable lives under `dir`. Unlike pidsWithExecutableUnder this never matches on
+ * command lines, so an editor or terminal that merely has the folder open does not count (or get
+ * killed by Stop). The listing is shared and cached briefly because status polls every few seconds.
+ */
+export async function pidsRunningUnder(dir: string, fresh = false): Promise<number[]> {
+  const now = Date.now();
+  if (fresh || !processCache || now - processCache.at > PROCESS_CACHE_MS) {
+    processCache = { at: now, entries: listProcessEntries() };
+  }
+  const entries = await processCache.entries;
+  const root = path.resolve(dir);
+  const prefix = root.endsWith(path.sep) ? root : root + path.sep;
+  const win = process.platform === 'win32';
+  const norm = (value: string) => (win ? value.toLowerCase() : value);
+  return entries
+    .filter((e) => e.pid !== process.pid && e.pid !== process.ppid)
+    .filter((e) => norm(e.exe).startsWith(norm(prefix)))
+    .map((e) => e.pid);
+}
+
+export async function stopProcessesUnder(
+  dir: string | null
+): Promise<{ status: 'ok' } | { status: 'error'; message: string }> {
+  if (!dir?.trim()) {
+    return { status: 'error', message: 'Stop needs a launch folder to find the process.' };
+  }
+  const pids = await pidsRunningUnder(dir, true);
+  if (pids.length === 0) {
+    return { status: 'error', message: "Couldn't find a process running from the launch folder." };
+  }
+  await Promise.all(pids.map((pid) => killPid(pid)));
+  processCache = null;
+  return { status: 'ok' };
+}
+
 async function killPid(pid: number): Promise<void> {
   if (pid === process.pid || pid === process.ppid) return;
   if (process.platform === 'win32') {
