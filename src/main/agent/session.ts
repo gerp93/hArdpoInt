@@ -249,7 +249,7 @@ export class AgentSession {
     return new Promise((resolve) => {
       const child = spawn(claudeExecutablePath(), ['auth', 'login'], {
         windowsHide: true,
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['pipe', 'pipe', 'pipe'],
       });
       this.loginProcess = child;
       let output = '';
@@ -268,6 +268,14 @@ export class AgentSession {
       this.emit({ kind: 'login', state: 'started' });
       const onData = (chunk: Buffer) => {
         output += chunk.toString();
+        if (/invalid code/i.test(chunk.toString())) {
+          this.emit({
+            kind: 'login',
+            state: 'started',
+            url: output.match(/https:\/\/[^\s"'<>]+/)?.[0],
+            message: "That code didn't work. Copy the whole code and try again.",
+          });
+        }
         const url = output.match(/https:\/\/[^\s"'<>]+/)?.[0];
         if (url && !announced) {
           announced = true;
@@ -285,6 +293,13 @@ export class AgentSession {
         )
       );
     });
+  }
+
+  /** The browser sign-in can't reach Hardpoint directly, so it shows a code to paste back. */
+  submitLoginCode(code: string): void {
+    const trimmed = code.trim();
+    if (trimmed) this.loginProcess?.stdin?.write(`${trimmed}
+`);
   }
 
   /** Is the bundled Claude signed in? */

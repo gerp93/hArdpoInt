@@ -76,6 +76,7 @@ export function ChatPanel({
   const [login, setLogin] = useState<{ state: 'idle' | 'started' | 'failed'; url?: string; message?: string }>({
     state: 'idle',
   });
+  const [loginCode, setLoginCode] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
 
   const handleEvent = useCallback((event: AgentEvent) => {
@@ -126,6 +127,7 @@ export function ChatPanel({
         if (event.state === 'ok') {
           setLoggedIn(true);
           setLogin({ state: 'idle' });
+          setLoginCode('');
         } else {
           setLogin({ state: event.state, url: event.url, message: event.message });
         }
@@ -220,13 +222,39 @@ export function ChatPanel({
           >
             {login.state === 'started' ? 'Waiting for sign-in…' : 'Sign in'}
           </button>
-          {login.state === 'started' && login.url && (
-            <p className="card-meta">
-              Browser didn&apos;t open?{' '}
-              <a href={login.url} target="_blank" rel="noreferrer">
-                Open the sign-in page
-              </a>
-            </p>
+          {login.state === 'started' && (
+            <>
+              <p className="card-meta">
+                After you authorize in the browser it shows a code. Paste it here:
+              </p>
+              <form
+                className="chat-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (loginCode.trim()) void agent.submitLoginCode(loginCode);
+                  setLoginCode('');
+                }}
+              >
+                <input
+                  className="chat-input"
+                  value={loginCode}
+                  placeholder="Paste the code from your browser"
+                  onChange={(e) => setLoginCode(e.target.value)}
+                />
+                <button type="submit" className="btn btn-sm" disabled={!loginCode.trim()}>
+                  Submit code
+                </button>
+              </form>
+              {login.message && <p className="card-meta">{login.message}</p>}
+              {login.url && (
+                <p className="card-meta">
+                  Browser didn&apos;t open?{' '}
+                  <a href={login.url} target="_blank" rel="noreferrer">
+                    Open the sign-in page
+                  </a>
+                </p>
+              )}
+            </>
           )}
           {login.state === 'failed' && (
             <p className="card-meta">Sign-in failed: {login.message ?? 'unknown error'}</p>

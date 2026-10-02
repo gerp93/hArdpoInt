@@ -22,6 +22,7 @@ const hardpoint: HardpointApi = {
     reset: () => ipcRenderer.invoke('agent:reset'),
     approve: (requestId, allow) => ipcRenderer.invoke('agent:approve', requestId, allow),
     login: () => ipcRenderer.invoke('agent:login'),
+    submitLoginCode: (code) => ipcRenderer.invoke('agent:loginCode', code),
     authStatus: () => ipcRenderer.invoke('agent:authStatus'),
     getWorkspace: () => ipcRenderer.invoke('agent:getWorkspace'),
     chooseWorkspace: () => ipcRenderer.invoke('agent:chooseWorkspace'),

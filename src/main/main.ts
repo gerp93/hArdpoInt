@@ -194,6 +194,7 @@ function registerIpc(): void {
     getAgent().approve(String(requestId), Boolean(allow))
   );
   ipcMain.handle('agent:login', () => getAgent().login());
+  ipcMain.handle('agent:loginCode', (_event, code: string) => getAgent().submitLoginCode(String(code ?? '')));
   ipcMain.handle('agent:authStatus', () => getAgent().authStatus());
   ipcMain.handle('agent:getWorkspace', () => agentWorkspace());
   ipcMain.handle('agent:chooseWorkspace', async () => {
