@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { HardpointApi, Mount } from '../shared/types';
+import type { AgentEvent, HardpointApi, Mount } from '../shared/types';
 
 const hardpoint: HardpointApi = {
   getStatus: () => ipcRenderer.invoke('hardpoint:getStatus'),
@@ -16,6 +16,21 @@ const hardpoint: HardpointApi = {
   killGpuProcess: (pid: number) => ipcRenderer.invoke('hardpoint:killGpuProcess', pid),
   getAppVersion: () => ipcRenderer.invoke('hardpoint:getAppVersion'),
   checkForUpdates: () => ipcRenderer.invoke('hardpoint:checkForUpdates'),
+  agent: {
+    send: (text) => ipcRenderer.invoke('agent:send', text),
+    interrupt: () => ipcRenderer.invoke('agent:interrupt'),
+    reset: () => ipcRenderer.invoke('agent:reset'),
+    approve: (requestId, allow) => ipcRenderer.invoke('agent:approve', requestId, allow),
+    login: () => ipcRenderer.invoke('agent:login'),
+    authStatus: () => ipcRenderer.invoke('agent:authStatus'),
+    getWorkspace: () => ipcRenderer.invoke('agent:getWorkspace'),
+    chooseWorkspace: () => ipcRenderer.invoke('agent:chooseWorkspace'),
+    onEvent: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, payload: AgentEvent) => listener(payload);
+      ipcRenderer.on('agent:event', handler);
+      return () => ipcRenderer.removeListener('agent:event', handler);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('hardpoint', hardpoint);

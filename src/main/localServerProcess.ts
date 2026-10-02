@@ -136,7 +136,10 @@ async function listProcessEntries(): Promise<ProcessEntry[]> {
  * command lines, so an editor or terminal that merely has the folder open does not count (or get
  * killed by Stop). The listing is shared and cached briefly because status polls every few seconds.
  */
-export async function pidsRunningUnder(dir: string, fresh = false): Promise<number[]> {
+export async function entriesRunningUnder(
+  dir: string,
+  fresh = false
+): Promise<{ pid: number; exe: string }[]> {
   const now = Date.now();
   if (fresh || !processCache || now - processCache.at > PROCESS_CACHE_MS) {
     processCache = { at: now, entries: listProcessEntries() };
@@ -148,8 +151,11 @@ export async function pidsRunningUnder(dir: string, fresh = false): Promise<numb
   const norm = (value: string) => (win ? value.toLowerCase() : value);
   return entries
     .filter((e) => e.pid !== process.pid && e.pid !== process.ppid)
-    .filter((e) => norm(e.exe).startsWith(norm(prefix)))
-    .map((e) => e.pid);
+    .filter((e) => norm(e.exe).startsWith(norm(prefix)));
+}
+
+export async function pidsRunningUnder(dir: string, fresh = false): Promise<number[]> {
+  return (await entriesRunningUnder(dir, fresh)).map((e) => e.pid);
 }
 
 export async function stopProcessesUnder(

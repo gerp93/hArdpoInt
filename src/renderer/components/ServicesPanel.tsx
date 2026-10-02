@@ -94,7 +94,7 @@ export function ServicesPanel({
 
   if (editing) {
     return (
-      <section className="card">
+      <section className="card card-fill mount-editor">
         <MountStepper
           initial={editing}
           embedded={embedded}
@@ -109,10 +109,10 @@ export function ServicesPanel({
   }
 
   return (
-    <section className="card">
+    <section className="card card-fill">
       <div className="card-header">
         <h2>Mounts</h2>
-        <div className="btn-row" style={{ margin: 0 }}>
+        <div className="btn-row btn-row-flush">
           <button
             type="button"
             className="btn btn-sm"
@@ -149,11 +149,8 @@ export function ServicesPanel({
           </button>
         </div>
       </div>
-      <p className="muted" style={{ marginTop: 0 }}>
-        Each mount is JSON in app data — Start/Stop/panels are defined on the mount, not baked into
-        Hardpoint. Scan, use a template, or add from scratch (Visual or Mount JSON).
-      </p>
       {panelError && <p className="banner banner-error">{panelError}</p>}
+      <div className="scroll-body">
 
       {showTemplates && (
         <div className="preset-grid">
@@ -212,9 +209,13 @@ export function ServicesPanel({
       )}
 
       {mounts.length === 0 ? (
-        <p className="muted">No mounts yet. Scan, add from a template, or Add mount.</p>
+        <p className="muted">
+          No mounts yet. Each mount is JSON in app data — scan localhost, add from a template, or
+          add one from scratch.
+        </p>
       ) : (
-        mounts.map((mount) => (
+        <div className="mount-grid">
+        {mounts.map((mount) => (
           <MountCard
             key={mount.id}
             mount={mount}
@@ -273,8 +274,10 @@ export function ServicesPanel({
               })
             }
           />
-        ))
+        ))}
+        </div>
       )}
+      </div>
     </section>
   );
 }

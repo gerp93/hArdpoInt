@@ -17,7 +17,7 @@ async function probeHost(hostUrl: string | null): Promise<boolean | null> {
   }
 }
 
-function probeTcp(port: number): Promise<boolean> {
+export function probeTcp(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = net.connect({ host: '127.0.0.1', port, timeout: 2_000 });
     const done = (up: boolean) => {
@@ -30,7 +30,7 @@ function probeTcp(port: number): Promise<boolean> {
   });
 }
 
-async function probeMount(m: Mount): Promise<boolean | null> {
+export async function probeMount(m: Mount): Promise<boolean | null> {
   if (m.probe?.type === 'process') {
     const dir = m.launch.mode === 'folder' ? m.launch.cwd?.trim() : null;
     return dir ? (await pidsRunningUnder(dir)).length > 0 : null;

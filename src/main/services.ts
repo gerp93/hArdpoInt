@@ -37,6 +37,11 @@ function loadSeedFile(): SeedFileEntry[] {
   }
 }
 
+/** Raw seed entries (id, name, description, mount JSON) — worked examples of the Mount schema. */
+export function readTemplateExamples(): SeedFileEntry[] {
+  return loadSeedFile();
+}
+
 export function listMountTemplates(): MountTemplateInfo[] {
   return loadSeedFile().map((s) => ({
     id: s.id,
