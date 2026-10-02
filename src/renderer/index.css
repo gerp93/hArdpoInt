@@ -4,9 +4,14 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
   margin: 0;
-  min-height: 100vh;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   background: var(--color-bg, #1a1a1a);
   color: var(--color-text, #eee);
@@ -24,17 +29,20 @@ body {
   border: 0;
 }
 
+/* ── App shell: fills the whole window; inner panes scroll, not the page ── */
+
 .app-shell {
-  min-height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 .top-bar {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.65rem 1rem;
+  padding: 0.5rem 0.9rem;
   background: var(--color-top-bar-bg, #222);
 }
 
@@ -54,50 +62,119 @@ body {
 .theme-picker select {
   background: var(--color-bg-hover, #333);
   color: var(--color-text, #eee);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.15));
   border-radius: 4px;
   padding: 0.25rem 0.5rem;
+  font: inherit;
+  font-size: 0.85rem;
 }
 
 .main-content {
   flex: 1;
-  padding: 1rem;
-  max-width: 1280px;
-  margin: 0 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem;
   width: 100%;
 }
 
 .dashboard {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
+/* ── View tabs (Dashboard / Command log / Updates) ── */
+
+.view-tabs {
+  flex: none;
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
+}
+
+.view-tab {
+  appearance: none;
+  background: transparent;
+  color: inherit;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 0.45rem 0.9rem;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  opacity: 0.7;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.view-tab:hover {
+  opacity: 1;
+}
+
+.view-tab.active {
+  opacity: 1;
+  font-weight: 600;
+  border-bottom-color: var(--color-accent-green, #52b788);
+}
+
+.tab-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(127, 127, 127, 0.3);
+}
+
+.tab-badge.alert {
+  background: var(--color-accent-red, #9b2226);
+  color: #fff;
+}
+
+.banners {
+  flex: none;
+}
+
+.banners .banner:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Dashboard grid ── */
+
 .dashboard-columns {
+  flex: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: 1rem;
-  align-items: start;
+  grid-template-columns: minmax(20rem, 28rem) minmax(0, 1fr);
+  gap: 0.75rem;
 }
 
 .dashboard-col {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
   min-width: 0;
+  min-height: 0;
 }
 
-@media (max-width: 900px) {
-  .dashboard-columns {
-    grid-template-columns: 1fr;
-  }
+/* On very short windows the system column scrolls rather than clipping. */
+.dashboard-col-system {
+  overflow-y: auto;
 }
+
+/* ── Cards ── */
 
 .card {
   background: var(--color-bg-hover, rgba(0, 0, 0, 0.25));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
   border-radius: 8px;
-  padding: 1rem 1.1rem;
+  padding: 0.85rem 1rem;
+  min-width: 0;
 }
 
 .card h2 {
@@ -105,12 +182,35 @@ body {
   font-size: 1rem;
 }
 
+/* A card that stretches to fill its column and scrolls its own body. */
+.card-fill {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-gpu {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-gpu-empty,
+.card-cpu,
+.card-updates {
+  flex: none;
+}
+
 .card-header {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.35rem;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  min-height: 2rem;
 }
 
 .card-header h2 {
@@ -124,6 +224,23 @@ body {
   word-break: break-all;
 }
 
+.card-meta-inline {
+  margin: 0;
+  min-width: 0;
+  text-align: right;
+  word-break: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scroll-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
 .folder-line {
   display: flex;
   flex-wrap: wrap;
@@ -131,10 +248,16 @@ body {
   gap: 0.5rem;
 }
 
+.install-path {
+  word-break: break-all;
+}
+
 .muted {
   opacity: 0.7;
   font-size: 0.9rem;
 }
+
+/* ── Buttons ── */
 
 .btn {
   appearance: none;
@@ -168,7 +291,12 @@ body {
   margin: 0.75rem 0;
 }
 
+.btn-row-flush {
+  margin: 0;
+}
+
 .status-pill {
+  flex: none;
   font-size: 0.75rem;
   padding: 0.15rem 0.5rem;
   border-radius: 999px;
@@ -185,16 +313,24 @@ body {
   color: #fff;
 }
 
+.update-note {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-accent-green, #52b788);
+}
+
+/* ── Meters & stats ── */
+
 .vram-row {
   display: flex;
   justify-content: space-between;
   font-size: 0.9rem;
-  margin: 0.5rem 0 0.35rem;
+  margin: 0.25rem 0 0.35rem;
 }
 
 .progress-bar {
   height: 8px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(127, 127, 127, 0.25);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -205,44 +341,335 @@ body {
   transition: width 0.3s ease;
 }
 
+.progress-fill.hot {
+  background: var(--color-accent-red, #e5383b);
+}
+
 .stat-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
   margin-top: 0.75rem;
+}
+
+.stat-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stat-tile {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  border-radius: 6px;
+  min-width: 0;
 }
 
 .stat-label {
   display: block;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-value {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── GPU process list: fixed-size scroll region so it never resizes the card ── */
+
+.gpu-proc-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.85rem;
+}
+
+.gpu-proc-tabs {
+  flex: none;
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.gpu-proc-tab {
+  background: transparent;
+  color: var(--color-text, #eee);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.18));
+  border-radius: 4px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.gpu-proc-tab.active {
+  border-color: var(--color-accent-green, #52b788);
+  background: rgba(82, 183, 136, 0.18);
+}
+
+.gpu-proc-hint {
+  flex: none;
+  margin: 0.5rem 0;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  /* Always exactly two lines so switching tabs never shifts the list. */
+  height: 2.7em;
+  overflow: hidden;
+}
+
+.proc-scroll {
+  flex: 1;
+  min-height: 7rem;
+  overflow-y: auto;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+  border-radius: 6px;
+  scrollbar-gutter: stable;
 }
 
 .proc-list {
-  margin: 0.75rem 0 0;
-  padding-left: 0;
+  margin: 0;
+  padding: 0;
   list-style: none;
   font-size: 0.85rem;
 }
 
 .proc-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 3.5rem;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem 0.75rem;
-  padding: 0.2rem 0;
+  gap: 0.75rem;
+  height: 2.25rem;
+  padding: 0 0.6rem;
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
+}
+
+.proc-row:last-child {
+  border-bottom: none;
 }
 
 .proc-label {
-  flex: 1;
-  min-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proc-meta {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.proc-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.proc-empty {
+  margin: 0;
+  padding: 0.75rem;
+}
+
+/* ── Mounts ── */
+
+.mount-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.service-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  background: rgba(127, 127, 127, 0.06);
+}
+
+.service-card .card-header {
+  margin-bottom: 0.15rem;
+}
+
+.service-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-card .btn-row {
+  margin: 0.6rem 0 0;
+  align-items: flex-start;
+}
+
+.mount-panel {
+  margin-top: 0.75rem;
+  overflow-x: auto;
+}
+
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.preset-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  background: rgba(127, 127, 127, 0.08);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.14));
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.preset-card:hover:not(:disabled) {
+  border-color: var(--color-accent-green, #52b788);
+}
+
+.preset-card code {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.scan-results {
+  margin: 0 0 0.75rem;
+}
+
+.scan-heading {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+}
+
+.scan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.scan-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  font-size: 0.85rem;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 0.4rem 0.35rem;
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+}
+
+.banner {
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  margin: 0 0 0.5rem;
+}
+
+.banner-error {
+  background: rgba(155, 34, 38, 0.35);
+  border: 1px solid var(--color-accent-red, #9b2226);
+}
+
+.banner-info {
+  background: rgba(34, 100, 155, 0.35);
+  border: 1px solid rgba(100, 180, 255, 0.5);
+  font-size: 0.85rem;
+}
+
+.cmd-preview {
+  display: block;
+  font-size: 0.75rem;
+  opacity: 0.75;
+  margin-top: 0.35rem;
   word-break: break-all;
+}
+
+.action-with-cmd {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+
+/* ── Command log ── */
+
+.cmd-log {
+  flex: 1;
+  min-height: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  font-size: 0.85rem;
+}
+
+.cmd-log li {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.06));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.cmd-log .cmd-time {
+  opacity: 0.6;
+  min-width: 5.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cmd-log .cmd-detail {
+  opacity: 0.7;
+  width: 100%;
+  padding-left: 6rem;
+}
+
+.cmd-log .cmd-fail code {
+  color: var(--color-accent-red, #f88);
+}
+
+.cmd-log .cmd-fail .cmd-detail {
+  color: var(--color-accent-red, #f88);
+  opacity: 1;
+}
+
+.cmd-log .cmd-ok code {
+  color: inherit;
+}
+
+/* ── Mount editor (stepper) ── */
+
+.mount-editor {
+  overflow-y: auto;
+}
+
+.mount-stepper {
+  width: 100%;
+  max-width: 56rem;
 }
 
 .mount-stepper .field {
@@ -254,12 +681,21 @@ body {
 
 .mount-stepper .field input[type='text'],
 .mount-stepper .field input:not([type]),
-.mount-stepper .field input[type='number'] {
-  background: transparent;
+.mount-stepper .field input[type='number'],
+.mount-stepper .field select,
+.mount-stepper .field textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--color-border, rgba(0, 255, 100, 0.35));
+  border-radius: 4px;
   color: inherit;
-  padding: 0.4rem 0.5rem;
+  padding: 0.45rem 0.55rem;
   font: inherit;
+}
+
+.mount-stepper .field select option {
+  background: var(--color-bg, #1a1a1a);
+  color: var(--color-text, #eee);
 }
 
 .mount-stepper .field.check {
@@ -272,7 +708,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
-  margin: 0.75rem 0;
+  margin: 0.5rem 0 0.75rem;
 }
 
 .stepper-body {
@@ -308,190 +744,36 @@ body {
   outline: 1px solid var(--color-accent, #0f0);
 }
 
-.mount-panel {
-  margin-top: 0.75rem;
-}
+/* Stacked layout for narrow windows: the page scrolls instead of the panes. */
+@media (max-width: 900px) {
+  .app-shell,
+  .main-content,
+  .dashboard,
+  .dashboard-columns {
+    height: auto;
+    min-height: 0;
+  }
 
-.gpu-proc-panel {
-  margin-top: 0.85rem;
-}
+  .app-shell {
+    min-height: 100%;
+  }
 
-.gpu-proc-tabs {
-  display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-}
+  .dashboard-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
 
-.gpu-proc-tab {
-  background: transparent;
-  color: var(--color-text, #eee);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 4px;
-  padding: 0.3rem 0.65rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
+  .card-fill {
+    max-height: none;
+  }
 
-.gpu-proc-tab.active {
-  border-color: var(--color-accent-green, #52b788);
-  background: rgba(82, 183, 136, 0.18);
-}
+  .scroll-body,
+  .cmd-log {
+    overflow: visible;
+    max-height: none;
+  }
 
-.gpu-proc-hint {
-  margin: 0.5rem 0 0;
-  font-size: 0.75rem;
-  line-height: 1.35;
-}
-
-.service-card {
-  margin-top: 1rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.service-card h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.preset-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.5rem;
-  margin: 0.75rem 0;
-}
-
-.preset-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.35rem;
-  text-align: left;
-  padding: 0.65rem 0.75rem;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 6px;
-  color: inherit;
-  cursor: pointer;
-}
-
-.preset-card:hover:not(:disabled) {
-  border-color: var(--color-accent-green, #52b788);
-}
-
-.preset-card code {
-  font-size: 0.75rem;
-  opacity: 0.8;
-}
-
-.scan-results {
-  margin: 0.75rem 0 1rem;
-}
-
-.scan-heading {
-  margin: 0 0 0.4rem;
-  font-size: 0.9rem;
-}
-
-.scan-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.scan-list li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.45rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 0.85rem;
-}
-
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-}
-
-.data-table th,
-.data-table td {
-  text-align: left;
-  padding: 0.4rem 0.35rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.banner {
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  margin: 0 0 0.5rem;
-}
-
-.banner-error {
-  background: rgba(155, 34, 38, 0.35);
-  border: 1px solid var(--color-accent-red, #9b2226);
-}
-
-.banner-info {
-  background: rgba(34, 100, 155, 0.35);
-  border: 1px solid rgba(100, 180, 255, 0.5);
-  font-size: 0.85rem;
-}
-
-.cmd-preview {
-  display: block;
-  font-size: 0.75rem;
-  opacity: 0.75;
-  margin-top: 0.35rem;
-  word-break: break-all;
-}
-
-.action-with-cmd {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  align-items: flex-start;
-}
-
-.cmd-log {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: 220px;
-  overflow: auto;
-  font-size: 0.8rem;
-}
-
-.cmd-log li {
-  padding: 0.35rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: baseline;
-}
-
-.cmd-log .cmd-time {
-  opacity: 0.6;
-  min-width: 4.5rem;
-}
-
-.cmd-log .cmd-detail {
-  opacity: 0.7;
-  width: 100%;
-  padding-left: 4.5rem;
-}
-
-.cmd-log .cmd-fail code {
-  color: var(--color-accent-red, #f88);
-}
-
-.cmd-log .cmd-fail .cmd-detail {
-  color: var(--color-accent-red, #f88);
-  opacity: 1;
-}
-
-.cmd-log .cmd-ok code {
-  color: inherit;
+  .proc-scroll {
+    flex: none;
+    height: 12rem;
+  }
 }
