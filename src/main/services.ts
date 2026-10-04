@@ -76,6 +76,10 @@ export function addFromTemplate(
   if (mount.stop?.type === 'port' && mount.hostUrl) {
     mount.stop = { ...mount.stop, port: portFromHostUrl(mount.hostUrl, mount.stop.port ?? 8080) };
   }
+  // Keep the Open button pointing at the same place when the host URL was overridden.
+  if (mount.open && base.hostUrl && mount.hostUrl && mount.open.url.startsWith(base.hostUrl)) {
+    mount.open = { ...mount.open, url: mount.hostUrl + mount.open.url.slice(base.hostUrl.length) };
+  }
   const saved = saveMount(mount);
   if (saved.status === 'error') return saved;
   return { status: 'ok', mount };

@@ -34,6 +34,13 @@ export interface MountStop {
  */
 export type MountProbe = { type: 'process' } | { type: 'tcp'; port: number };
 
+/** Adds an Open button to the card that opens this URL in the browser. */
+export interface MountOpen {
+  url: string;
+  /** Button text; defaults to "Open". */
+  label?: string;
+}
+
 export interface MountHelp {
   when: 'startMissing' | 'launchUnset' | 'always';
   text: string;
@@ -84,6 +91,7 @@ export interface Mount {
   start: MountStart | null;
   stop: MountStop | null;
   probe: MountProbe | null;
+  open: MountOpen | null;
   help: MountHelp | null;
   panels: MountPanel[];
 }
@@ -114,6 +122,7 @@ export function blankMount(partial?: Partial<Mount>): Mount {
     start: partial?.start ?? null,
     stop: partial?.stop ?? null,
     probe: partial?.probe ?? null,
+    open: partial?.open ?? null,
     help: partial?.help ?? null,
     panels: partial?.panels ?? [],
   };
@@ -180,6 +189,24 @@ function asProbe(raw: unknown): MountProbe | null {
     return { type: 'tcp', port };
   }
   return null;
+}
+
+/** Only http(s) links are allowed, so a mount can't make the card open files or run scripts. */
+export function isHttpUrl(value: string): boolean {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function asOpen(raw: unknown): MountOpen | null {
+  if (!isRecord(raw) || typeof raw.url !== 'string') return null;
+  const url = raw.url.trim();
+  if (!isHttpUrl(url)) return null;
+  const label = typeof raw.label === 'string' && raw.label.trim() ? raw.label.trim() : undefined;
+  return { url, label };
 }
 
 function asHelp(raw: unknown): MountHelp | null {
@@ -267,6 +294,7 @@ export function normalizeMount(raw: unknown): Mount | null {
     start: asStart(raw.start),
     stop: asStop(raw.stop),
     probe: asProbe(raw.probe),
+    open: asOpen(raw.open),
     help: asHelp(raw.help),
     panels,
   };
@@ -386,6 +414,7 @@ export function migrateLegacyService(raw: unknown): Mount | null {
             : undefined,
       },
       probe: null,
+      open: null,
       help: null,
       panels: [
         {
@@ -446,6 +475,7 @@ export function migrateLegacyService(raw: unknown): Mount | null {
         preview: 'taskkill listeners on Chatterbox port + processes under launch folder',
       },
       probe: null,
+      open: null,
       help: {
         when: 'launchUnset',
         text: 'Choose a launch folder before Start is available. Stop still appears when the service is reachable.',
@@ -498,6 +528,7 @@ export function migrateLegacyService(raw: unknown): Mount | null {
     start,
     stop,
     probe: null,
+    open: null,
     help: start
       ? null
       : {

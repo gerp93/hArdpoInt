@@ -78,6 +78,7 @@
         "preview": "python_embedded\\python.exe start.py --portable --nvidia-cu128 --verbose",
         "cwdRequired": true
       },
+      "open": { "url": "http://127.0.0.1:8004/" },
       "stop": {
         "type": "port",
         "port": 8004,
@@ -99,6 +100,7 @@
       "name": "ComfyUI",
       "hostUrl": "http://127.0.0.1:8188",
       "launch": { "mode": "unset", "cwd": null },
+      "open": { "url": "http://127.0.0.1:8188/" },
       "start": null,
       "stop": {
         "type": "port",

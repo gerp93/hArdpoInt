@@ -11,8 +11,10 @@ This repo follows the shared conventions in [gerp93/KVG_Standards](https://githu
 The floating **Assistant** button (desktop window only) opens a chat where you say which server you want to run. It researches the install, works out the start command, port, status check and stop method, and — after you approve — saves the mount so you only click Start next time.
 
 - Runs on the Claude binary bundled with Hardpoint; use **Sign in** once (opens your browser, Hardpoint never sees your password).
-- Every shell command, file write, page fetch, and mount save/start/stop asks for your approval. Reading files is limited to its workspace unless you approve more.
-- It works in a workspace folder (default `Documents\Hardpoint`, changeable in the chat).
+- **What it can do:** read files on this PC (never credentials, keys or browser data), search the web, and create, edit, delete, start and stop Hardpoint mounts.
+- **What it can't do:** write, edit or delete any file, run its own commands, or install software. It isn't given those tools at all. When something needs doing, it tells you the exact steps.
+- **Approvals:** saving a mount shows you what will run (Start/Stop commands, status check, Open URL) and asks once; after you approve, it can start/stop that mount without asking again. Deleting a mount, or fetching a page outside well-known doc hosts (GitHub, Hugging Face, PyPI, npm, Read the Docs), also asks.
+- The only command that ever runs is a mount's Start/Stop command. Commands that delete files, change system settings, ask for admin rights, push to git, or download-and-run code are refused when it saves a mount.
 
 ## Development
 

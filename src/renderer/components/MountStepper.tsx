@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Mount } from '../../shared/mountSchema';
 import {
   blankMount,
+  isHttpUrl,
   normalizeMount,
   parseMountJson,
   portFromHostUrl,
@@ -184,6 +185,33 @@ export function MountStepper({
                   placeholder="http://127.0.0.1:11434"
                 />
               </label>
+              <label className="field">
+                Open button URL (optional)
+                <input
+                  value={draft.open?.url ?? ''}
+                  onChange={(e) => {
+                    const url = e.target.value;
+                    setDraft({
+                      ...draft,
+                      open: url.trim() ? { url, label: draft.open?.label } : null,
+                    });
+                  }}
+                  placeholder="http://127.0.0.1:8188/"
+                />
+              </label>
+              <div className="btn-row" style={{ margin: 0 }}>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  disabled={!draft.hostUrl}
+                  onClick={() => setDraft({ ...draft, open: draft.hostUrl ? { url: draft.hostUrl, label: draft.open?.label } : null })}
+                >
+                  Use Host URL
+                </button>
+              </div>
+              {draft.open && !isHttpUrl(draft.open.url.trim()) && (
+                <p className="muted">The Open button needs a URL starting with http:// or https://.</p>
+              )}
               <label className="field">
                 Status check
                 <select
