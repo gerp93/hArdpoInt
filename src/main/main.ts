@@ -16,6 +16,7 @@ import {
 } from './services';
 import { scanLocalhostServices } from './scan';
 import { AgentSession } from './agent/session';
+import { scanMcpServers, stopMcpServer } from './mcpServers';
 import { readConfig, writeConfig } from './config';
 import type { Mount, UpdateCheckResult } from '../shared/types';
 
@@ -184,6 +185,8 @@ function registerIpc(): void {
   ipcMain.handle('hardpoint:killGpuProcess', (_event, pid: number) => killActiveGpuProcess(pid));
   ipcMain.handle('hardpoint:getAppVersion', () => app.getVersion());
   ipcMain.handle('hardpoint:checkForUpdates', () => checkForUpdatesNow());
+  ipcMain.handle('hardpoint:listMcpServers', () => scanMcpServers());
+  ipcMain.handle('hardpoint:stopMcpServer', (_event, pid: number) => stopMcpServer(Number(pid)));
 
   ipcMain.handle('agent:send', (_event, text: string) =>
     getAgent().send(String(text ?? ''), agentWorkspace())

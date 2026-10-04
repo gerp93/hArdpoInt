@@ -795,3 +795,23 @@ body {
     height: 12rem;
   }
 }
+
+/* MCP servers tab */
+.mcp-sub {
+  font-size: 0.75rem;
+  margin-top: 0.15rem;
+}
+
+.mcp-idle {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.mcp-idle ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.mcp-idle li {
+  margin: 0.25rem 0;
+}

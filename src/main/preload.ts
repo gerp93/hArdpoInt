@@ -16,6 +16,8 @@ const hardpoint: HardpointApi = {
   killGpuProcess: (pid: number) => ipcRenderer.invoke('hardpoint:killGpuProcess', pid),
   getAppVersion: () => ipcRenderer.invoke('hardpoint:getAppVersion'),
   checkForUpdates: () => ipcRenderer.invoke('hardpoint:checkForUpdates'),
+  listMcpServers: () => ipcRenderer.invoke('hardpoint:listMcpServers'),
+  stopMcpServer: (pid: number) => ipcRenderer.invoke('hardpoint:stopMcpServer', pid),
   agent: {
     send: (text) => ipcRenderer.invoke('agent:send', text),
     interrupt: () => ipcRenderer.invoke('agent:interrupt'),

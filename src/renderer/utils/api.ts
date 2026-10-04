@@ -131,6 +131,14 @@ export const hardpointClient: HardpointApi = {
     if (hasIpc()) return window.hardpoint.getAppVersion();
     return 'embed';
   },
+  listMcpServers: async () => {
+    if (hasIpc()) return window.hardpoint.listMcpServers();
+    return { running: [], configured: [] };
+  },
+  stopMcpServer: async (pid) => {
+    if (hasIpc()) return window.hardpoint.stopMcpServer(pid);
+    return { status: 'error' as const, message: 'Stopping MCP servers needs the Hardpoint desktop window.' };
+  },
   checkForUpdates: async () => {
     if (hasIpc()) return window.hardpoint.checkForUpdates();
     return {
