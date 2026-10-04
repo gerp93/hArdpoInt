@@ -77,6 +77,37 @@ export interface CommandLogEntry {
   detail: string | null;
 }
 
+/** One running MCP server (a process tree), as found by the MCP manager. */
+export interface McpServerInfo {
+  id: string;
+  /** Declared name when a client config lists it, otherwise a name derived from the command line. */
+  name: string;
+  source: 'configured' | 'detected';
+  /** Which client's config declares it (Claude Desktop, Claude Code, Cursor, ...). */
+  declaredIn: string | null;
+  pid: number;
+  processCount: number;
+  startedAt: string | null;
+  commandLine: string;
+  /** The app that launched it, when still running. */
+  client: string | null;
+  /** The process that launched it has exited, so nothing is using it. */
+  orphaned: boolean;
+  ports: number[];
+}
+
+export interface McpConfiguredServer {
+  name: string;
+  declaredIn: string;
+  command: string;
+  running: boolean;
+}
+
+export interface McpScanResult {
+  running: McpServerInfo[];
+  configured: McpConfiguredServer[];
+}
+
 export interface DashboardStatus {
   gpu: GpuSnapshot;
   cpu: CpuSnapshot;
@@ -119,6 +150,8 @@ export interface HardpointApi {
   killGpuProcess: (pid: number) => Promise<ActionResult>;
   getAppVersion: () => Promise<string>;
   checkForUpdates: () => Promise<UpdateCheckResult>;
+  listMcpServers: () => Promise<McpScanResult>;
+  stopMcpServer: (pid: number) => Promise<ActionResult>;
   /** In-app assistant. Only present in the desktop window (not the HTTP embed). */
   agent?: AgentApi;
 }

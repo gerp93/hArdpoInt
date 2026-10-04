@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { DashboardStatus, GpuProcess, UpdateCheckResult } from '../../shared/types';
+import type {
+  DashboardStatus,
+  GpuProcess,
+  McpScanResult,
+  McpServerInfo,
+  UpdateCheckResult,
+} from '../../shared/types';
 import { hardpointClient, isEmbeddedHttpMode } from '../utils/api';
+import { McpPanel } from '../components/McpPanel';
 import { ServicesPanel } from '../components/ServicesPanel';
 
 const POLL_MS = 3000;
@@ -108,7 +115,7 @@ function GpuProcessTabs({
   );
 }
 
-type DashTab = 'dashboard' | 'log' | 'updates';
+type DashTab = 'dashboard' | 'log' | 'mcp' | 'updates';
 
 type UpdateUiStatus = 'idle' | 'checking' | UpdateCheckResult['status'];
 
@@ -120,6 +127,8 @@ export function Dashboard() {
   const [updateStatus, setUpdateStatus] = useState<UpdateUiStatus>('idle');
   const [updateMessage, setUpdateMessage] = useState<string | null>(null);
   const [tab, setTab] = useState<DashTab>('dashboard');
+  const [mcp, setMcp] = useState<McpScanResult | null>(null);
+  const [mcpError, setMcpError] = useState<string | null>(null);
   const embedded = isEmbeddedHttpMode();
 
   const refresh = useCallback(async () => {
@@ -137,6 +146,39 @@ export function Dashboard() {
     const id = window.setInterval(() => void refresh(), POLL_MS);
     return () => window.clearInterval(id);
   }, [refresh]);
+
+  const refreshMcp = useCallback(async () => {
+    try {
+      setMcp(await hardpointClient.listMcpServers());
+      setMcpError(null);
+    } catch (e) {
+      setMcpError(e instanceof Error ? e.message : String(e));
+    }
+  }, []);
+
+  // Each scan lists every process, so poll gently unless the MCP tab is open.
+  useEffect(() => {
+    if (embedded) return;
+    void refreshMcp();
+    const id = window.setInterval(() => void refreshMcp(), tab === 'mcp' ? 4000 : 20000);
+    return () => window.clearInterval(id);
+  }, [embedded, tab, refreshMcp]);
+
+  async function stopMcp(servers: McpServerInfo[]) {
+    setBusy('mcp-stop');
+    try {
+      for (const server of servers) {
+        const result = await hardpointClient.stopMcpServer(server.pid);
+        if (result.status === 'error') throw new Error(result.message);
+      }
+      setMcpError(null);
+    } catch (e) {
+      setMcpError(e instanceof Error ? e.message : String(e));
+    } finally {
+      await refreshMcp();
+      setBusy(null);
+    }
+  }
 
   useEffect(() => {
     void hardpointClient.getAppVersion().then(setAppVersion).catch(() => setAppVersion(null));
@@ -182,6 +224,7 @@ export function Dashboard() {
       ? Math.min(100, Math.round((cpu.memoryUsedMiB / cpu.memoryTotalMiB) * 100))
       : null;
 
+  const mcpOrphans = (mcp?.running ?? []).filter((s) => s.orphaned).length;
   const logCount = status?.commandLog.length ?? 0;
   const logFailed = (status?.commandLog ?? []).some((e) => !e.ok);
   const updateAvailable = updateStatus === 'available';
@@ -193,6 +236,16 @@ export function Dashboard() {
       badge: logCount > 0 ? String(logCount) : undefined,
       alert: logFailed,
     },
+    ...(embedded
+      ? []
+      : [
+          {
+            id: 'mcp' as const,
+            label: 'MCP servers',
+            badge: mcpOrphans > 0 ? String(mcpOrphans) : undefined,
+            alert: mcpOrphans > 0,
+          },
+        ]),
     {
       id: 'updates',
       label: 'Updates',
@@ -337,6 +390,21 @@ export function Dashboard() {
             />
           </div>
         </div>
+      )}
+
+      {tab === 'mcp' && !embedded && (
+        <McpPanel
+          result={mcp}
+          busy={busy}
+          error={mcpError}
+          onRefresh={() => void refreshMcp()}
+          onStop={(server) => {
+            if (window.confirm(`Stop ${server.name} (PID ${server.pid})?`)) void stopMcp([server]);
+          }}
+          onStopOrphans={(servers) => {
+            if (window.confirm(`Stop ${servers.length} orphaned MCP server(s)?`)) void stopMcp(servers);
+          }}
+        />
       )}
 
       {tab === 'log' && (
