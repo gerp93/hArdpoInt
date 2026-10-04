@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import { z } from 'zod';
 import type { Mount } from '../../shared/mountSchema';
-import { canStartMount, normalizeMount } from '../../shared/mountSchema';
+import { canStartMount, isHttpUrl, normalizeMount } from '../../shared/mountSchema';
 import { getCommandLog } from '../commandLog';
 import { entriesRunningUnder } from '../localServerProcess';
 import { scanLocalhostServices } from '../scan';
@@ -13,6 +13,7 @@ import {
   saveMount,
 } from '../services';
 import { probeMount, probeTcp } from '../statusSnapshot';
+import { dangerousCommandReason } from './policy';
 import type { AgentSdk } from './sdk';
 
 export const SERVER_NAME = 'hardpoint';
@@ -65,6 +66,13 @@ const mountShape = {
     })
     .nullable()
     .describe('How the card knows it is up. null = HTTP GET on hostUrl.'),
+  open: z
+    .object({
+      url: z.string().describe('http(s) URL the Open button opens, e.g. the service web UI.'),
+      label: z.string().optional(),
+    })
+    .nullable()
+    .describe('Adds an Open button to the card. null when the service has no web UI.'),
   help: z
     .object({ when: z.enum(['startMissing', 'launchUnset', 'always']), text: z.string() })
     .nullable(),
@@ -124,12 +132,36 @@ function isLoopbackUrl(raw: string): boolean {
   }
 }
 
-/** Normalize a mount and list problems that would make it not work. */
-export function checkMount(raw: unknown): { mount: Mount | null; warnings: string[] } {
+/**
+ * Normalize a mount and list problems. `warnings` are things that would make it not work;
+ * `blockers` are commands the Assistant is not allowed to put in a mount at all.
+ */
+export function checkMount(raw: unknown): {
+  mount: Mount | null;
+  warnings: string[];
+  blockers: string[];
+} {
   const mount = normalizeMount(raw);
-  if (!mount) return { mount: null, warnings: ['Not a valid mount (needs id and name).'] };
+  if (!mount) return { mount: null, warnings: ['Not a valid mount (needs id and name).'], blockers: [] };
 
   const warnings: string[] = [];
+  const blockers: string[] = [];
+  const commands: [string, string | undefined][] = [
+    ['start.command', mount.start?.command],
+    ['stop.command', mount.stop?.command],
+    ...(mount.stop?.afterShell ?? []).map((c): [string, string] => ['stop.afterShell', c]),
+  ];
+  for (const [field, command] of commands) {
+    const reason = command ? dangerousCommandReason(command) : null;
+    if (reason) blockers.push(`${field} is not allowed (${reason}): ${command}`);
+  }
+  const rawOpen = (raw as { open?: { url?: unknown } | null } | null)?.open;
+  if (rawOpen && !mount.open) {
+    warnings.push(`open.url must be an http(s) URL; got: ${String(rawOpen.url)}`);
+  }
+  if (mount.open && !isHttpUrl(mount.open.url)) {
+    warnings.push('open.url is not an http(s) URL.');
+  }
   const cwd = mount.launch.cwd?.trim();
 
   if (mount.launch.mode === 'folder') {
@@ -157,7 +189,7 @@ export function checkMount(raw: unknown): { mount: Mount | null; warnings: strin
   if (mount.hostUrl && !isLoopbackUrl(mount.hostUrl)) {
     warnings.push('hostUrl is not on this PC; Stop and the probe only make sense for local servers.');
   }
-  return { mount, warnings };
+  return { mount, warnings, blockers };
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -220,9 +252,9 @@ export function createHardpointServer(sdk: AgentSdk) {
         'Check a mount without saving it. Returns the normalized mount plus warnings about anything that would not work. Always run this before save_mount.',
         { mount: z.object(mountShape) },
         async ({ mount }) => {
-          const { mount: normalized, warnings } = checkMount(mount);
+          const { mount: normalized, warnings, blockers } = checkMount(mount);
           return normalized
-            ? ok({ ok: warnings.length === 0, warnings, mount: normalized })
+            ? ok({ ok: warnings.length === 0 && blockers.length === 0, warnings, blockers, mount: normalized })
             : fail(warnings.join('\n'));
         },
         readOnly
@@ -273,8 +305,9 @@ export function createHardpointServer(sdk: AgentSdk) {
         'Create or update a mount (a dashboard card). Validates first and refuses an invalid mount. The user reviews and approves the JSON before it is saved.',
         { mount: z.object(mountShape) },
         async ({ mount }) => {
-          const { mount: normalized, warnings } = checkMount(mount);
+          const { mount: normalized, warnings, blockers } = checkMount(mount);
           if (!normalized) return fail(warnings.join('\n'));
+          if (blockers.length > 0) return fail(`Not saved. ${blockers.join(' ')}`);
           const result = saveMount(normalized);
           return result.status === 'ok'
             ? ok({ saved: normalized.id, warnings })

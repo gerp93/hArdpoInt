@@ -3,21 +3,29 @@ import { randomUUID } from 'node:crypto';
 import * as fs from 'fs';
 import type { PermissionResult, Query, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentEvent } from '../../shared/agentTypes';
+import { isResearchUrl, isSensitivePath, readTargetPath } from './policy';
 import { buildSystemPrompt } from './prompt';
 import { assistantAvailable, claudeExecutablePath, loadSdk } from './sdk';
 import { createHardpointServer, READ_ONLY_TOOLS, SERVER_NAME } from './tools';
 
-/** Built-in Claude Code tools the assistant may use. Anything not auto-allowed below asks first. */
-const BUILTIN_TOOLS = ['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch', 'Bash', 'Write', 'Edit'];
-// Deliberately not auto-allowed: Read/Glob/Grep (Claude Code already allows them inside the
-// workspace and asks for anything outside it) and WebFetch (each fetched URL is shown to the user,
-// so injected page content can't quietly send local data out in a URL).
+/**
+ * The Assistant can read and look things up, and manage mounts through the hardpoint tools. It is
+ * NOT given Bash, Write or Edit: it cannot change any file or run any command of its own.
+ */
+const BUILTIN_TOOLS = ['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch'];
+const DISALLOWED_TOOLS = ['Bash', 'Write', 'Edit', 'NotebookEdit'];
+// Read/Glob/Grep/WebFetch go through decide() (credential locations are refused, docs hosts are
+// allowed, other URLs ask). Mount tools that change things ask, except as described in decide().
 const AUTO_ALLOWED = ['WebSearch', ...READ_ONLY_TOOLS];
+const SAVE_MOUNT = `mcp__${SERVER_NAME}__save_mount`;
+const START_MOUNT = `mcp__${SERVER_NAME}__start_mount`;
+const STOP_MOUNT = `mcp__${SERVER_NAME}__stop_mount`;
 
 const MAX_TURNS = 80;
 const LOGIN_TIMEOUT_MS = 5 * 60_000;
 
 interface Pending {
+  toolName: string;
   input: Record<string, unknown>;
   resolve: (result: PermissionResult) => void;
 }
@@ -29,9 +37,6 @@ function asRecord(value: unknown): Record<string, unknown> {
 /** One-line description of what an approval is for. */
 export function describeTool(toolName: string, input: Record<string, unknown>): string {
   const mcpPrefix = `mcp__${SERVER_NAME}__`;
-  if (toolName === 'Bash') return `Run command: ${String(input.command ?? '')}`;
-  if (toolName === 'Write') return `Write file: ${String(input.file_path ?? '')}`;
-  if (toolName === 'Edit') return `Edit file: ${String(input.file_path ?? '')}`;
   if (toolName === 'Read') return `Read file: ${String(input.file_path ?? '')}`;
   if (toolName === 'WebFetch') return `Fetch page: ${String(input.url ?? '')}`;
   if (toolName === 'Glob' || toolName === 'Grep') {
@@ -69,6 +74,8 @@ export class AgentSession {
   private abort: AbortController | null = null;
   private pending = new Map<string, Pending>();
   private loginProcess: ReturnType<typeof spawn> | null = null;
+  /** Mounts whose save the user approved this turn: starting/stopping those needs no second OK. */
+  private approvedMounts = new Set<string>();
 
   constructor(private readonly emit: (event: AgentEvent) => void) {}
 
@@ -101,11 +108,12 @@ export class AgentSession {
           includePartialMessages: true,
           maxTurns: MAX_TURNS,
           tools: BUILTIN_TOOLS,
+          disallowedTools: DISALLOWED_TOOLS,
           mcpServers: { [SERVER_NAME]: createHardpointServer(sdk) },
           allowedTools: AUTO_ALLOWED,
           permissionMode: 'default',
           canUseTool: (toolName, input, options) =>
-            this.askUser(toolName, input, options.requestId, options.signal),
+            this.decide(toolName, input, options.requestId, options.signal),
         },
       });
     } catch (e) {
@@ -183,10 +191,43 @@ export class AgentSession {
       }
     } finally {
       this.denyAllPending('The assistant stopped.');
+      this.approvedMounts.clear();
       this.query = null;
       this.abort = null;
       this.emit({ kind: 'running', running: false });
     }
+  }
+
+  /** Allow, refuse, or ask the user. Reads are open except credential locations. */
+  private decide(
+    toolName: string,
+    input: Record<string, unknown>,
+    requestId: string | undefined,
+    signal: AbortSignal
+  ): Promise<PermissionResult> {
+    const allow = Promise.resolve<PermissionResult>({ behavior: 'allow', updatedInput: input });
+
+    if (toolName === 'Read' || toolName === 'Glob' || toolName === 'Grep') {
+      const targets = [readTargetPath(toolName, input), input.pattern, input.glob].filter(
+        (v): v is string => typeof v === 'string' && v.length > 0
+      );
+      if (targets.some((t) => isSensitivePath(t))) {
+        return Promise.resolve<PermissionResult>({
+          behavior: 'deny',
+          message: 'Reading credentials, keys and browser profile data is not allowed.',
+        });
+      }
+      return allow;
+    }
+    if (toolName === 'WebFetch' && isResearchUrl(input.url)) return allow;
+    if (
+      (toolName === START_MOUNT || toolName === STOP_MOUNT) &&
+      typeof input.id === 'string' &&
+      this.approvedMounts.has(input.id)
+    ) {
+      return allow;
+    }
+    return this.askUser(toolName, input, requestId, signal);
   }
 
   private askUser(
@@ -197,7 +238,7 @@ export class AgentSession {
   ): Promise<PermissionResult> {
     const id = requestId ?? randomUUID();
     return new Promise((resolve) => {
-      this.pending.set(id, { input, resolve });
+      this.pending.set(id, { toolName, input, resolve });
       signal.addEventListener('abort', () => {
         if (this.pending.delete(id)) {
           this.emit({ kind: 'approval_done', requestId: id });
@@ -213,6 +254,10 @@ export class AgentSession {
     if (!pending) return;
     this.pending.delete(requestId);
     this.emit({ kind: 'approval_done', requestId });
+    if (allow && pending.toolName === SAVE_MOUNT) {
+      const id = asRecord(pending.input.mount).id;
+      if (typeof id === 'string') this.approvedMounts.add(id);
+    }
     pending.resolve(
       allow
         ? { behavior: 'allow', updatedInput: pending.input }
@@ -241,6 +286,7 @@ export class AgentSession {
     await this.interrupt();
     this.abort?.abort();
     this.sessionId = undefined;
+    this.approvedMounts.clear();
   }
 
   /** Run the bundled Claude's browser sign-in. The user finishes it in their browser. */

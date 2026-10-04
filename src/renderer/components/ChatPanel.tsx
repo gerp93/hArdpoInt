@@ -34,14 +34,37 @@ function ApprovalCard({
   approval: Approval;
   onAnswer: (allow: boolean) => void;
 }) {
-  const command =
-    approval.toolName === 'Bash' && typeof (approval.input as { command?: unknown })?.command === 'string'
-      ? String((approval.input as { command: string }).command)
+  // For a mount save, show what will actually run, so approving is an informed choice.
+  const mount =
+    approval.toolName.endsWith('save_mount') &&
+    typeof approval.input === 'object' &&
+    approval.input !== null
+      ? ((approval.input as { mount?: Record<string, any> }).mount ?? null)
       : null;
+  const rows: [string, string][] = mount
+    ? ([
+        ['Start', mount.start?.command],
+        ['Stop', mount.stop ? (mount.stop.command ?? `${mount.stop.type}${mount.stop.port ? ` :${mount.stop.port}` : ''}`) : null],
+        ['Status check', mount.probe ? mount.probe.type : mount.hostUrl ? `HTTP ${mount.hostUrl}` : null],
+        ['Open button', mount.open?.url],
+        ['Launch folder', mount.launch?.cwd ?? (mount.launch?.mode === 'path' ? 'PATH' : null)],
+      ] as [string, string | null | undefined][]).filter((r): r is [string, string] => Boolean(r[1]))
+    : [];
   return (
     <div className="chat-approval">
       <p className="chat-approval-title">Needs your OK: {approval.title}</p>
-      {command && <pre className="chat-code">{command}</pre>}
+      {rows.length > 0 && (
+        <dl className="chat-approval-rows">
+          {rows.map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>
+                <code>{value}</code>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
       <details>
         <summary className="muted">Details</summary>
         <pre className="chat-code">{JSON.stringify(approval.input, null, 2)}</pre>
@@ -195,16 +218,32 @@ export function ChatPanel({
       <p className="muted chat-intro">
         Tell it a server you want to run. It works out the commands, ports and stop method, and adds
         the card for you.
+      </p>
+      <details className="chat-scope">
+        <summary>What it can and can&apos;t do</summary>
+        <ul>
+          <li>
+            <strong>Can:</strong> read files on this PC (not credentials, keys or browser data), search
+            the web, and create, edit, delete, start and stop Hardpoint mounts.
+          </li>
+          <li>
+            <strong>Can&apos;t:</strong> write or delete files, run its own commands, or install
+            software. When something needs doing, it tells you the exact steps.
+          </li>
+          <li>
+            The only command that ever runs is a mount&apos;s Start/Stop command, and you see it before
+            the mount is saved.
+          </li>
+        </ul>
         {workspace && (
-          <>
-            {' '}
-            Works in <code className="install-path">{workspace}</code>{' '}
+          <p className="muted">
+            It starts looking in <code className="install-path">{workspace}</code>{' '}
             <button type="button" className="btn btn-sm" disabled={running} onClick={() => void changeWorkspace()}>
               Change
             </button>
-          </>
+          </p>
         )}
-      </p>
+      </details>
 
       {loggedIn === false && (
         <div className="banner banner-info">

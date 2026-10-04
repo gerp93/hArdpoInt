@@ -48,6 +48,8 @@ export function MountCard({
 
   const showStart = Boolean(mount.start) && startOk && !up;
   const showStop = Boolean(mount.stop) && up;
+  // Open needs a reachable service; unknown status (no probe) still gets the button.
+  const showOpen = Boolean(mount.open) && mount.reachable !== false;
 
   const launchLabel =
     mount.launch.mode === 'path'
@@ -97,13 +99,16 @@ export function MountCard({
         </p>
       )}
 
+      {(showStart || (showStop && up) || showOpen) && (
       <div className="btn-row">
         {showStart && (
           <div className="action-with-cmd">
             <button type="button" className="btn" disabled={!!busy} onClick={onStart}>
               Start
             </button>
-            <code className="cmd-preview">{mount.start?.preview ?? mount.start?.command}</code>
+            <code className="cmd-preview" title={mount.start?.preview ?? mount.start?.command}>
+              {mount.start?.preview ?? mount.start?.command}
+            </code>
           </div>
         )}
         {showStop && up && (
@@ -111,19 +116,26 @@ export function MountCard({
             <button type="button" className="btn" disabled={!!busy} onClick={onStop}>
               Stop
             </button>
-            <code className="cmd-preview">
+            <code className="cmd-preview" title={mount.stop?.preview}>
               {mount.stop?.preview ??
                 (mount.stop?.type === 'port' ? `port ${mount.stop.port}` : mount.stop?.type)}
             </code>
           </div>
         )}
-        <button type="button" className="btn btn-sm" disabled={!!busy} onClick={onEdit}>
-          Edit
-        </button>
-        <button type="button" className="btn btn-sm" disabled={!!busy} onClick={onRemove}>
-          Remove
-        </button>
+        {showOpen && mount.open && (
+          <div className="action-with-cmd">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => window.open(mount.open!.url, '_blank', 'noopener')}
+            >
+              {mount.open.label ?? 'Open'}
+            </button>
+            <code className="cmd-preview">{mount.open.url}</code>
+          </div>
+        )}
       </div>
+      )}
 
       {mount.panels.map((panel) => (
         <MountPanelView
@@ -134,6 +146,15 @@ export function MountCard({
           onPanelAction={onPanelAction}
         />
       ))}
+
+      <div className="card-footer">
+        <button type="button" className="btn btn-sm" disabled={!!busy} onClick={onEdit}>
+          Edit
+        </button>
+        <button type="button" className="btn btn-sm" disabled={!!busy} onClick={onRemove}>
+          Remove
+        </button>
+      </div>
     </div>
   );
 }

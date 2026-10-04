@@ -42,6 +42,7 @@ export type {
   MountPanelColumn,
   MountPanelList,
   MountPanelRuntime,
+  MountOpen,
   MountProbe,
   MountStart,
   MountStop,

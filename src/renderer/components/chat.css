@@ -163,3 +163,40 @@
   border-radius: 4px;
   padding: 0.4rem 0.6rem;
 }
+
+.chat-scope {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+}
+
+.chat-scope summary {
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.chat-scope ul {
+  margin: 0.35rem 0;
+  padding-left: 1.1rem;
+}
+
+.chat-approval-rows {
+  margin: 0.25rem 0;
+  font-size: 0.8rem;
+}
+
+.chat-approval-rows div {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.15rem 0;
+}
+
+.chat-approval-rows dt {
+  min-width: 6.5rem;
+  opacity: 0.7;
+}
+
+.chat-approval-rows dd {
+  margin: 0;
+  min-width: 0;
+  word-break: break-all;
+}
