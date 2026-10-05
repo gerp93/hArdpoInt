@@ -5,6 +5,26 @@ import { loopbackHostKey, loopbackPortFromUrl } from '../../shared/loopbackUrl';
 import { hardpointClient } from '../utils/api';
 import { MountCard } from './MountCard';
 import { MountStepper } from './MountStepper';
+import {
+  DEFAULT_VIEW,
+  SORT_LABELS,
+  applyMountView,
+  countByState,
+  isDefaultView,
+  loadView,
+  saveView,
+  searchMounts,
+  type MountView,
+  type SortKey,
+  type StatusFilter,
+} from '../utils/mountView';
+
+const FILTER_LABELS: Record<StatusFilter, string> = {
+  all: 'All',
+  up: 'Up',
+  down: 'Down',
+  unknown: 'Unknown',
+};
 
 export function ServicesPanel({
   mounts,
@@ -25,6 +45,12 @@ export function ServicesPanel({
   const [panelError, setPanelError] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(false);
   const [editing, setEditing] = useState<Mount | null>(null);
+  const [view, setView] = useState<MountView>(loadView);
+
+  useEffect(() => saveView(view), [view]);
+
+  const counts = countByState(searchMounts(mounts, view.query));
+  const visible = applyMountView(mounts, view);
 
   useEffect(() => {
     void hardpointClient.listMountTemplates().then(setTemplates).catch(() => setTemplates([]));
@@ -214,8 +240,58 @@ export function ServicesPanel({
           add one from scratch.
         </p>
       ) : (
+        <>
+        {mounts.length > 1 && (
+          <div className="mount-toolbar">
+            <input
+              className="mount-search"
+              type="search"
+              placeholder="Search mounts…"
+              value={view.query}
+              onChange={(e) => setView({ ...view, query: e.target.value })}
+            />
+            <div className="mount-filters" role="group" aria-label="Filter by status">
+              {(Object.keys(FILTER_LABELS) as StatusFilter[])
+                .filter((f) => f !== 'unknown' || counts.unknown > 0 || view.filter === 'unknown')
+                .map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    className={`filter-chip${view.filter === f ? ' active' : ''}`}
+                    aria-pressed={view.filter === f}
+                    onClick={() => setView({ ...view, filter: f })}
+                  >
+                    {FILTER_LABELS[f]} <span className="muted">{counts[f]}</span>
+                  </button>
+                ))}
+            </div>
+            <label className="mount-sort">
+              Sort
+              <select
+                value={view.sort}
+                onChange={(e) => setView({ ...view, sort: e.target.value as SortKey })}
+              >
+                {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
+                  <option key={key} value={key}>
+                    {SORT_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
+        {visible.length === 0 && (
+          <p className="muted">
+            No mounts match.{' '}
+            {!isDefaultView(view) && (
+              <button type="button" className="btn btn-sm" onClick={() => setView(DEFAULT_VIEW)}>
+                Clear filters
+              </button>
+            )}
+          </p>
+        )}
         <div className="mount-grid">
-        {mounts.map((mount) => (
+        {visible.map((mount) => (
           <MountCard
             key={mount.id}
             mount={mount}
@@ -276,6 +352,7 @@ export function ServicesPanel({
           />
         ))}
         </div>
+        </>
       )}
       </div>
     </section>
