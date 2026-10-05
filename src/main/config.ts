@@ -17,6 +17,8 @@ export interface AppConfig {
   mountsMigrated?: boolean;
   /** Folder the in-app assistant works in (installs, clones, scripts). */
   agentWorkspace?: string;
+  /** Extra config files (besides known apps') to read MCP server lists from. */
+  mcpConfigFiles?: string[];
 }
 
 function getConfigPath(): string {

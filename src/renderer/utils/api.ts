@@ -133,7 +133,15 @@ export const hardpointClient: HardpointApi = {
   },
   listMcpServers: async () => {
     if (hasIpc()) return window.hardpoint.listMcpServers();
-    return { running: [], configured: [] };
+    return { running: [], configured: [], sources: [] };
+  },
+  addMcpConfigFile: async () => {
+    if (hasIpc()) return window.hardpoint.addMcpConfigFile();
+    return { status: 'error' as const, message: 'Adding a config file needs the Hardpoint desktop window.' };
+  },
+  removeMcpConfigFile: async (file) => {
+    if (hasIpc()) return window.hardpoint.removeMcpConfigFile(file);
+    return { status: 'error' as const, message: 'Needs the Hardpoint desktop window.' };
   },
   stopMcpServer: async (pid) => {
     if (hasIpc()) return window.hardpoint.stopMcpServer(pid);

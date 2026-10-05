@@ -8,7 +8,7 @@ This repo follows the shared conventions in [gerp93/KVG_Standards](https://githu
 
 ## MCP servers
 
-The **MCP servers** tab (desktop window) lists the MCP servers running on this PC: the ones your apps declare (Claude Desktop, Claude Code, Cursor, Windsurf, VS Code configs; env values are never read) plus anything that looks like one. Each row shows which app started it, how long it has run, and its ports. A server whose launching app has exited is flagged **Orphaned**, and **Stop** (or **Stop all orphaned**) ends it, so you don't need Task Manager.
+The **MCP servers** card on the Dashboard (desktop window) lists the MCP servers running on this PC. It finds them three ways: servers your apps declare in config files (Claude Desktop, Claude Code, Cursor, Windsurf and VS Code locations, plus any config file you add with **Add config file…**; env values are never read), processes whose command line looks like an MCP server, and helper processes (node, python, uvx, …) that an MCP app started but no config explains. Each row shows which app started it, how long it has run, and its ports. A server whose launching app has exited is flagged **Orphaned**, and **Stop** (or **Stop all orphaned**) ends it, so you don't need Task Manager. **Where it looks for servers** shows every config location checked and whether it exists on this PC.
 
 ## Assistant
 

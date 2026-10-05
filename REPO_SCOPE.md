@@ -7,7 +7,7 @@ Hardpoint is a **local services dashboard** focused on AI servers (Ollama, Chatt
 - Start/stop locally configured Ollama, Chatterbox, and other server installs (mounts), with HTTP, TCP, or process-based status checks
 - GPU snapshot via `nvidia-smi`
 - Loopback HTTP API on `127.0.0.1:3921` for status and control
-- **MCP servers tab**: list the local MCP servers apps have started (from their configs plus detection), flag orphaned ones, and stop them. Desktop window only (not exposed on the HTTP API).
+- **MCP servers card** (Dashboard): list the local MCP servers apps have started (from known and user-added configs plus detection), flag orphaned ones, and stop them. Desktop window only (not exposed on the HTTP API).
 - **Assistant**: an in-app chat (Claude Agent SDK, using the user's own Claude sign-in) that works out a server's start/stop/probe settings and saves the mount. It is limited to reading and to managing mounts: it cannot write files or run commands of its own.
 - KVG_Standards: VisualAssault themes, AGPL-3.0, release workflows, electron-updater, minimal Electron menu
 

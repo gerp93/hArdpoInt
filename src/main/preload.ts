@@ -18,6 +18,8 @@ const hardpoint: HardpointApi = {
   checkForUpdates: () => ipcRenderer.invoke('hardpoint:checkForUpdates'),
   listMcpServers: () => ipcRenderer.invoke('hardpoint:listMcpServers'),
   stopMcpServer: (pid: number) => ipcRenderer.invoke('hardpoint:stopMcpServer', pid),
+  addMcpConfigFile: () => ipcRenderer.invoke('hardpoint:addMcpConfigFile'),
+  removeMcpConfigFile: (file: string) => ipcRenderer.invoke('hardpoint:removeMcpConfigFile', file),
   agent: {
     send: (text) => ipcRenderer.invoke('agent:send', text),
     interrupt: () => ipcRenderer.invoke('agent:interrupt'),
