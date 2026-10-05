@@ -16,7 +16,7 @@ import {
 } from './services';
 import { scanLocalhostServices } from './scan';
 import { AgentSession } from './agent/session';
-import { scanMcpServers, stopMcpServer } from './mcpServers';
+import { addMcpConfigFile, removeMcpConfigFile, scanMcpServers, stopMcpServer } from './mcpServers';
 import { readConfig, writeConfig } from './config';
 import type { Mount, UpdateCheckResult } from '../shared/types';
 
@@ -187,6 +187,24 @@ function registerIpc(): void {
   ipcMain.handle('hardpoint:checkForUpdates', () => checkForUpdatesNow());
   ipcMain.handle('hardpoint:listMcpServers', () => scanMcpServers());
   ipcMain.handle('hardpoint:stopMcpServer', (_event, pid: number) => stopMcpServer(Number(pid)));
+  ipcMain.handle('hardpoint:addMcpConfigFile', async () => {
+    const options: Electron.OpenDialogOptions = {
+      title: 'Choose an MCP config file',
+      properties: ['openFile', 'showHiddenFiles'],
+      filters: [
+        { name: 'JSON', extensions: ['json'] },
+        { name: 'All files', extensions: ['*'] },
+      ],
+    };
+    const pick = mainWindow
+      ? await dialog.showOpenDialog(mainWindow, options)
+      : await dialog.showOpenDialog(options);
+    if (pick.canceled || pick.filePaths.length === 0) return { status: 'cancelled' as const };
+    return addMcpConfigFile(pick.filePaths[0]);
+  });
+  ipcMain.handle('hardpoint:removeMcpConfigFile', (_event, file: string) =>
+    removeMcpConfigFile(String(file ?? ''))
+  );
 
   ipcMain.handle('agent:send', (_event, text: string) =>
     getAgent().send(String(text ?? ''), agentWorkspace())

@@ -83,6 +83,8 @@ export interface McpServerInfo {
   /** Declared name when a client config lists it, otherwise a name derived from the command line. */
   name: string;
   source: 'configured' | 'detected';
+  /** How an undeclared server was spotted: its command line, or being launched by an MCP app. */
+  detectedVia: 'pattern' | 'launcher' | null;
   /** Which client's config declares it (Claude Desktop, Claude Code, Cursor, ...). */
   declaredIn: string | null;
   pid: number;
@@ -103,9 +105,20 @@ export interface McpConfiguredServer {
   running: boolean;
 }
 
+/** A config file the scan reads for declared servers. */
+export interface McpConfigSource {
+  label: string;
+  path: string;
+  exists: boolean;
+  servers: number;
+  /** Built-in locations for known apps; false for files the user added. */
+  builtIn: boolean;
+}
+
 export interface McpScanResult {
   running: McpServerInfo[];
   configured: McpConfiguredServer[];
+  sources: McpConfigSource[];
 }
 
 export interface DashboardStatus {
@@ -152,6 +165,9 @@ export interface HardpointApi {
   checkForUpdates: () => Promise<UpdateCheckResult>;
   listMcpServers: () => Promise<McpScanResult>;
   stopMcpServer: (pid: number) => Promise<ActionResult>;
+  /** Opens a file picker; remembers the chosen JSON file as an MCP config to read. */
+  addMcpConfigFile: () => Promise<ActionResult | { status: 'cancelled' }>;
+  removeMcpConfigFile: (file: string) => Promise<ActionResult>;
   /** In-app assistant. Only present in the desktop window (not the HTTP embed). */
   agent?: AgentApi;
 }

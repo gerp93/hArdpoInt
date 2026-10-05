@@ -115,7 +115,7 @@ function GpuProcessTabs({
   );
 }
 
-type DashTab = 'dashboard' | 'log' | 'mcp' | 'updates';
+type DashTab = 'dashboard' | 'log' | 'updates';
 
 type UpdateUiStatus = 'idle' | 'checking' | UpdateCheckResult['status'];
 
@@ -156,13 +156,22 @@ export function Dashboard() {
     }
   }, []);
 
-  // Each scan lists every process, so poll gently unless the MCP tab is open.
+  // Each scan lists every process, so poll gently, and slower when the dashboard isn't showing.
   useEffect(() => {
     if (embedded) return;
     void refreshMcp();
-    const id = window.setInterval(() => void refreshMcp(), tab === 'mcp' ? 4000 : 20000);
+    const id = window.setInterval(() => void refreshMcp(), tab === 'dashboard' ? 8000 : 30000);
     return () => window.clearInterval(id);
   }, [embedded, tab, refreshMcp]);
+
+  async function changeMcpConfig(
+    action: () => Promise<{ status: 'ok' } | { status: 'cancelled' } | { status: 'error'; message: string }>
+  ) {
+    const result = await action();
+    if (result.status === 'error') setMcpError(result.message);
+    else setMcpError(null);
+    await refreshMcp();
+  }
 
   async function stopMcp(servers: McpServerInfo[]) {
     setBusy('mcp-stop');
@@ -224,7 +233,6 @@ export function Dashboard() {
       ? Math.min(100, Math.round((cpu.memoryUsedMiB / cpu.memoryTotalMiB) * 100))
       : null;
 
-  const mcpOrphans = (mcp?.running ?? []).filter((s) => s.orphaned).length;
   const logCount = status?.commandLog.length ?? 0;
   const logFailed = (status?.commandLog ?? []).some((e) => !e.ok);
   const updateAvailable = updateStatus === 'available';
@@ -236,16 +244,6 @@ export function Dashboard() {
       badge: logCount > 0 ? String(logCount) : undefined,
       alert: logFailed,
     },
-    ...(embedded
-      ? []
-      : [
-          {
-            id: 'mcp' as const,
-            label: 'MCP servers',
-            badge: mcpOrphans > 0 ? String(mcpOrphans) : undefined,
-            alert: mcpOrphans > 0,
-          },
-        ]),
     {
       id: 'updates',
       label: 'Updates',
@@ -388,23 +386,24 @@ export function Dashboard() {
               onBusy={setBusy}
               onChanged={refresh}
             />
+            {!embedded && (
+              <McpPanel
+                result={mcp}
+                busy={busy}
+                error={mcpError}
+                onRefresh={() => void refreshMcp()}
+                onStop={(server) => {
+                  if (window.confirm(`Stop ${server.name} (PID ${server.pid})?`)) void stopMcp([server]);
+                }}
+                onStopOrphans={(servers) => {
+                  if (window.confirm(`Stop ${servers.length} orphaned MCP server(s)?`)) void stopMcp(servers);
+                }}
+                onAddConfig={() => void changeMcpConfig(() => hardpointClient.addMcpConfigFile())}
+                onRemoveConfig={(file) => void changeMcpConfig(() => hardpointClient.removeMcpConfigFile(file))}
+              />
+            )}
           </div>
         </div>
-      )}
-
-      {tab === 'mcp' && !embedded && (
-        <McpPanel
-          result={mcp}
-          busy={busy}
-          error={mcpError}
-          onRefresh={() => void refreshMcp()}
-          onStop={(server) => {
-            if (window.confirm(`Stop ${server.name} (PID ${server.pid})?`)) void stopMcp([server]);
-          }}
-          onStopOrphans={(servers) => {
-            if (window.confirm(`Stop ${servers.length} orphaned MCP server(s)?`)) void stopMcp(servers);
-          }}
-        />
       )}
 
       {tab === 'log' && (
