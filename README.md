@@ -6,6 +6,10 @@ Local dashboard for **local AI / tool servers** and **NVIDIA GPU** status on thi
 
 This repo follows the shared conventions in [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards) (theming, release/CI, update-check, licensing, logo/branding) — see that repo for the rules this one is expected to keep up with.
 
+## Mounts
+
+With more than one mount, the Mounts card gets a search box (name, URL or folder), **All / Up / Down / Unknown** filters with counts, and a sort menu (added order, name A–Z or Z–A, up first, down first). Your choice is remembered.
+
 ## MCP servers
 
 The **MCP servers** tab (desktop window) lists the MCP servers running on this PC: the ones your apps declare (Claude Desktop, Claude Code, Cursor, Windsurf, VS Code configs; env values are never read) plus anything that looks like one. Each row shows which app started it, how long it has run, and its ports. A server whose launching app has exited is flagged **Orphaned**, and **Stop** (or **Stop all orphaned**) ends it, so you don't need Task Manager.
