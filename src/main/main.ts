@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, shell, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, Menu, MenuItem, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import * as path from 'path';
 import { startApiServer, stopApiServer } from './apiServer';
@@ -62,6 +62,32 @@ function createWindow(): void {
     if (url.startsWith('http://') || url.startsWith('https://')) void shell.openExternal(url);
     return { action: 'deny' };
   });
+
+  attachContextMenu(mainWindow);
+}
+
+/**
+ * The Edit menu is intentionally dropped from the application menu (see
+ * buildMenu), so cut/copy/paste/select-all need to stay reachable via
+ * right-click instead. Mirrors RolePlaymate's setupApplicationMenu /
+ * attachContextMenu pattern (KVG_Standards electron-menu.md).
+ */
+function attachContextMenu(win: BrowserWindow): void {
+  win.webContents.on('context-menu', (_event, params) => {
+    const menu = new Menu();
+
+    if (params.isEditable) {
+      if (params.editFlags.canCut) menu.append(new MenuItem({ role: 'cut' }));
+      if (params.editFlags.canCopy) menu.append(new MenuItem({ role: 'copy' }));
+      if (params.editFlags.canPaste) menu.append(new MenuItem({ role: 'paste' }));
+      if (params.editFlags.canSelectAll) menu.append(new MenuItem({ role: 'selectAll' }));
+    } else if (params.selectionText) {
+      menu.append(new MenuItem({ role: 'copy' }));
+    }
+
+    if (menu.items.length === 0) return;
+    menu.popup({ window: win });
+  });
 }
 
 function buildMenu(): void {
@@ -70,10 +96,14 @@ function buildMenu(): void {
   const viewMenu: Electron.MenuItemConstructorOptions = {
     label: 'View',
     submenu: [
-      { role: 'reload' },
-      { role: 'forceReload' },
-      { role: 'toggleDevTools' },
-      { type: 'separator' },
+      ...(!app.isPackaged
+        ? [
+            { role: 'reload' as const },
+            { role: 'forceReload' as const },
+            { role: 'toggleDevTools' as const },
+            { type: 'separator' as const },
+          ]
+        : []),
       { role: 'resetZoom' },
       { role: 'zoomIn' },
       { role: 'zoomOut' },
