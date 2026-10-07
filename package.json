@@ -55,7 +55,9 @@
     "asarUnpack": [
       "node_modules/@anthropic-ai/claude-agent-sdk/**",
       "node_modules/@anthropic-ai/claude-agent-sdk-*/**",
-      "node_modules/zod/**"
+      "node_modules/zod/package.json",
+      "node_modules/zod/v4/**/*.js",
+      "node_modules/zod/v4/**/package.json"
     ],
     "extraResources": [
       {
