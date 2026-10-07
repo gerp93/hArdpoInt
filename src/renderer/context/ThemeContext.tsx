@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Theme, AVAILABLE_THEMES, getStoredTheme, saveTheme, applyTheme, THEME_LABELS } from '../utils/themes';
+import { Theme, AVAILABLE_THEMES, getStoredTheme, saveTheme, getEmbedOptions, applyTheme, THEME_LABELS } from '../utils/themes';
 
 interface ThemeContextType {
   currentTheme: Theme;
@@ -11,7 +11,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [currentTheme, setCurrentTheme] = useState<Theme>(() => getStoredTheme());
+  const [currentTheme, setCurrentTheme] = useState<Theme>(() => getEmbedOptions().theme ?? getStoredTheme());
 
   useEffect(() => {
     applyTheme(currentTheme);
@@ -19,7 +19,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const handleSetTheme = (theme: Theme) => {
     setCurrentTheme(theme);
-    saveTheme(theme);
+    if (!getEmbedOptions().theme) saveTheme(theme);
   };
 
   return (
