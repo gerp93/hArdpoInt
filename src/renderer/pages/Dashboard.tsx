@@ -7,6 +7,7 @@ import type {
   UpdateCheckResult,
 } from '../../shared/types';
 import { hardpointClient, isEmbeddedHttpMode } from '../utils/api';
+import { getEmbedOptions } from '../utils/themes';
 import { McpPanel } from '../components/McpPanel';
 import { ServicesPanel } from '../components/ServicesPanel';
 
@@ -130,6 +131,7 @@ export function Dashboard() {
   const [mcp, setMcp] = useState<McpScanResult | null>(null);
   const [mcpError, setMcpError] = useState<string | null>(null);
   const embedded = isEmbeddedHttpMode();
+  const showEmbedBanner = embedded && !getEmbedOptions().bare;
 
   const refresh = useCallback(async () => {
     try {
@@ -270,9 +272,9 @@ export function Dashboard() {
         ))}
       </nav>
 
-      {(embedded || error) && (
+      {(showEmbedBanner || error) && (
         <div className="banners">
-          {embedded && (
+          {showEmbedBanner && (
             <p className="banner banner-info">
               Embedded / browser mode — talking to Hardpoint over HTTP at 127.0.0.1:3921 (folder
               pickers need the desktop window).
