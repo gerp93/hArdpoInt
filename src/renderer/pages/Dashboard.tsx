@@ -6,7 +6,12 @@ import type {
   McpServerInfo,
   UpdateCheckResult,
 } from '../../shared/types';
-import { hardpointClient, isEmbeddedHttpMode } from '../utils/api';
+import {
+  getPendingUpdateVersion,
+  hardpointClient,
+  isEmbeddedHttpMode,
+  showHardpointWindow,
+} from '../utils/api';
 import { getEmbedOptions } from '../utils/themes';
 import { McpPanel } from '../components/McpPanel';
 import { ServicesPanel } from '../components/ServicesPanel';
@@ -132,6 +137,7 @@ export function Dashboard() {
   const [mcpError, setMcpError] = useState<string | null>(null);
   const embedded = isEmbeddedHttpMode();
   const showEmbedBanner = embedded && !getEmbedOptions().bare;
+  const [pendingUpdate, setPendingUpdate] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -191,6 +197,12 @@ export function Dashboard() {
     }
   }
 
+  // The embed can't check or install updates itself; it only points at the desktop window.
+  useEffect(() => {
+    if (!embedded) return;
+    void getPendingUpdateVersion().then(setPendingUpdate);
+  }, [embedded]);
+
   useEffect(() => {
     void hardpointClient.getAppVersion().then(setAppVersion).catch(() => setAppVersion(null));
   }, []);
@@ -246,12 +258,17 @@ export function Dashboard() {
       badge: logCount > 0 ? String(logCount) : undefined,
       alert: logFailed,
     },
-    {
-      id: 'updates',
-      label: 'Updates',
-      badge: updateAvailable ? 'New' : undefined,
-      alert: updateAvailable,
-    },
+    // Updates are handled in the desktop window, not the embed.
+    ...(embedded
+      ? []
+      : [
+          {
+            id: 'updates' as const,
+            label: 'Updates',
+            badge: updateAvailable ? 'New' : undefined,
+            alert: updateAvailable,
+          },
+        ]),
   ];
 
   return (
@@ -272,12 +289,20 @@ export function Dashboard() {
         ))}
       </nav>
 
-      {(showEmbedBanner || error) && (
+      {(showEmbedBanner || pendingUpdate || error) && (
         <div className="banners">
           {showEmbedBanner && (
             <p className="banner banner-info">
               Embedded / browser mode — talking to Hardpoint over HTTP at 127.0.0.1:3921 (folder
               pickers need the desktop window).
+            </p>
+          )}
+          {pendingUpdate && (
+            <p className="banner banner-info">
+              Hardpoint {pendingUpdate} is available.{' '}
+              <button type="button" className="btn" onClick={() => void showHardpointWindow()}>
+                Open Hardpoint to update
+              </button>
             </p>
           )}
           {error && <p className="banner banner-error">{error}</p>}

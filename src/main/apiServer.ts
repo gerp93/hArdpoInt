@@ -100,7 +100,15 @@ export function getApiBaseUrl(): string {
   return `http://${API_HOST}:${API_PORT}`;
 }
 
-export function startApiServer(): void {
+/** Hooks the main process gives the loopback API for things only it can do. */
+export interface ApiHandlers {
+  /** Show / focus the desktop window (creating it if it was closed). */
+  showWindow: () => void;
+  /** Version of an update that is available or downloaded, or null. */
+  getPendingUpdate: () => string | null;
+}
+
+export function startApiServer(handlers?: ApiHandlers): void {
   if (server) return;
 
   server = http.createServer(async (req, res) => {
@@ -126,6 +134,17 @@ export function startApiServer(): void {
       if (req.method === 'GET' && url.pathname === '/api/status') {
         const status = await buildDashboardStatus();
         sendJson(res, 200, status, cors);
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/api/window/show') {
+        handlers?.showWindow();
+        sendJson(res, 200, { status: 'ok' }, cors);
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/api/update') {
+        sendJson(res, 200, { version: handlers?.getPendingUpdate() ?? null }, cors);
         return;
       }
 

@@ -29,6 +29,11 @@ body {
   border: 0;
 }
 
+/* Embedded with ?bare=1: the host app supplies the padding and frame. */
+.app-shell-bare .main-content {
+  padding: 0;
+}
+
 /* ── App shell: fills the whole window; inner panes scroll, not the page ── */
 
 .app-shell {

@@ -8,7 +8,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { bare } = getEmbedOptions();
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${bare ? ' app-shell-bare' : ''}`}>
       {!bare && (
         <header className="top-bar">
           {!logoHidden && (
