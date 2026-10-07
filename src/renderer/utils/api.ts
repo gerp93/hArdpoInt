@@ -156,6 +156,21 @@ export const hardpointClient: HardpointApi = {
   },
 };
 
+/** Embed only: version of an update the desktop app has found, or null. */
+export async function getPendingUpdateVersion(): Promise<string | null> {
+  try {
+    const result = await httpJson<{ version: string | null }>('/api/update');
+    return result.version ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Embed only: bring the Hardpoint desktop window to the front. */
+export async function showHardpointWindow(): Promise<void> {
+  await httpJson('/api/window/show', { method: 'POST', body: '{}' });
+}
+
 export function isEmbeddedHttpMode(): boolean {
   return !hasIpc();
 }

@@ -27,6 +27,8 @@ const REPO_URL = 'https://github.com/gerp93/hArdpoInt';
 const ISSUES_URL = `${REPO_URL}/issues`;
 
 let mainWindow: BrowserWindow | null = null;
+/** Set once the updater has seen a newer version; the embed shows a notice for it. */
+let pendingUpdateVersion: string | null = null;
 let agent: AgentSession | null = null;
 
 function getAgent(): AgentSession {
@@ -263,7 +265,11 @@ function setupAutoUpdater(): void {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
+  autoUpdater.on('update-available', (info) => {
+    pendingUpdateVersion = info.version;
+  });
   autoUpdater.on('update-downloaded', (info) => {
+    pendingUpdateVersion = info.version;
     const win = mainWindow;
     if (!win) return;
     void dialog
@@ -329,10 +335,20 @@ function checkForUpdatesNow(): Promise<UpdateCheckResult> {
   });
 }
 
+function showMainWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
 app.whenReady().then(() => {
   buildMenu();
   registerIpc();
-  startApiServer();
+  startApiServer({ showWindow: showMainWindow, getPendingUpdate: () => pendingUpdateVersion });
   createWindow();
   setupAutoUpdater();
 
