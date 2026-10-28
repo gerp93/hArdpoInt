@@ -1,0 +1,21 @@
+# Typecheck and tests on every PR. Releases are separate (auto-release.yml runs on push to main).
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # --ignore-scripts: skips Electron's binary download; typecheck and tests don't need it.
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm test
