@@ -922,3 +922,210 @@ body {
   border-radius: 4px;
   padding: 0.2rem 0.4rem;
 }
+
+/* Command board (Commands tab) */
+.cb-card .mount-toolbar {
+  flex: none;
+}
+
+.cb-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cb-list {
+  flex: 0 1 auto;
+  max-height: 55%;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cb-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.35rem;
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+}
+
+.cb-row.selected {
+  background: rgba(127, 127, 127, 0.14);
+}
+
+.cb-main {
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.cb-main strong,
+.cb-sub {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cb-sub {
+  font-size: 0.75rem;
+  margin-top: 0.1rem;
+}
+
+.cb-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.status-run {
+  background: var(--color-accent-blue, #3a6ea5);
+  color: #fff;
+}
+
+.status-idle {
+  background: rgba(127, 127, 127, 0.3);
+}
+
+.cb-output {
+  flex: 1 1 0;
+  min-height: 9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cb-output-head {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cb-spacer {
+  flex: 1;
+}
+
+.cb-ran {
+  flex: none;
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.cb-pre {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  overflow: auto;
+  padding: 0.55rem 0.7rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.15));
+  background: rgba(0, 0, 0, 0.35);
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+
+.cb-empty-output {
+  margin: 0;
+}
+
+.cb-editor .scroll-body {
+  max-width: 44rem;
+}
+
+.cb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0 0 0.7rem;
+  font-size: 0.85rem;
+}
+
+.cb-field > span:first-child {
+  opacity: 0.8;
+}
+
+.cb-field input,
+.cb-field select {
+  font: inherit;
+  color: inherit;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.2));
+  border-radius: 4px;
+  padding: 0.35rem 0.55rem;
+  min-width: 0;
+}
+
+.cb-field select option {
+  color: initial;
+}
+
+.cb-mono {
+  font-family: Consolas, 'Cascadia Mono', monospace;
+}
+
+.cb-narrow input {
+  max-width: 9rem;
+}
+
+.cb-inline {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cb-inline input {
+  flex: 1;
+}
+
+.cb-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.7rem;
+  font-size: 0.85rem;
+}
+
+.cb-hint {
+  margin: 0 0 0.7rem;
+  font-size: 0.8rem;
+}
+
+.cb-host-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.cb-hostform {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border, rgba(255, 255, 255, 0.1));
+}
+
+.cb-test {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+}
+
+.cb-test-ok {
+  color: var(--color-accent-green, #52b788);
+}
+
+.cb-test-bad {
+  color: var(--color-accent-red, #e5383b);
+}

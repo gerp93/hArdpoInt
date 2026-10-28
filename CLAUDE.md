@@ -11,12 +11,14 @@ npm install
 npm run dev      # Vite :5174 + electron main
 npm run build
 npm run typecheck
+npm test         # vitest
 npm run package  # electron-builder → release/
 ```
 
 ## Architecture
 
 - `src/main/` — Electron main: `main.ts` (window, IPC, menu, updater), `config.ts` (BOM-safe `app-config.json` in userData), `ollama.ts` / `chatterbox.ts` (HTTP to local servers), `launch.ts` (start/stop, folder pickers), `gpu.ts` (`nvidia-smi`), `localServerProcess.ts` (port/process stop), `agent/` (in-app Assistant: `sdk.ts` loads the ESM-only Claude Agent SDK and its bundled `claude` binary, `tools.ts` in-process mount tools, `session.ts` streaming + approvals + sign-in, `prompt.ts`), `apiServer.ts` (127.0.0.1:3921 only, CORS for localhost).
+- `src/main/commands/` — the Commands tab: `store.ts` (commands/hosts in `app-config.json`, last runs in `command-runs.json`), `runner.ts` (spawn, stream, timeout, cancel; ssh run directly with an argv, local via `cmd.exe /d /s /c` verbatim), `ipc.ts` (every handler goes through the trusted-sender check; native confirm dialog), `trust.ts`. Saved commands must stay off `apiServer.ts` and out of `agent/` (`boundaries.test.ts` enforces it). `apiGuard.ts` limits who may call the loopback API.
 - `src/renderer/` — Single-page dashboard (`Dashboard.tsx`), VisualAssault themes (`themes.css` vendored), `hardpoint-theme` in localStorage.
 - `src/shared/types.ts` — `DashboardStatus` and IPC/API shapes.
 

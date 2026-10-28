@@ -36,6 +36,9 @@ const SENSITIVE_PATH_PARTS = [
   'appdata/roaming/microsoft/credentials',
   'appdata/roaming/microsoft/protect',
   'keychain',
+  // Hardpoint's own saved commands, hosts and last outputs.
+  'app-config.json',
+  'command-runs.json',
 ];
 
 function slashes(p: string): string {
@@ -80,41 +83,5 @@ export function isResearchUrl(raw: unknown): boolean {
   }
 }
 
-const DANGEROUS_COMMAND: { pattern: RegExp; reason: string }[] = [
-  {
-    pattern: /\b(rm|rmdir|rd|del|erase|remove-item|ri|format|diskpart|mkfs)\b/i,
-    reason: 'deletes files or formats disks',
-  },
-  {
-    pattern: /\b(reg(\.exe)?\s+(add|delete|import)|regedit|schtasks|bcdedit|netsh|icacls|takeown|setx|set-executionpolicy)\b/i,
-    reason: 'changes system, registry, scheduler or security settings',
-  },
-  {
-    pattern: /\b(sc(\.exe)?\s+(create|config|delete)|net(\.exe)?\s+(user|localgroup))\b/i,
-    reason: 'creates or changes services or accounts',
-  },
-  {
-    pattern: /\b(sudo|runas)\b|-verb\s+runas/i,
-    reason: 'asks for administrator rights',
-  },
-  {
-    pattern: /\b(invoke-expression|iex)\b|-enc(odedcommand)?\b|frombase64string/i,
-    reason: 'runs obfuscated or dynamically built code',
-  },
-  {
-    pattern: /\b(curl|wget|invoke-webrequest|iwr|irm)\b[^\n|]*\|\s*(sh|bash|iex|powershell|pwsh|cmd)/i,
-    reason: 'downloads and runs code in one step',
-  },
-  {
-    pattern: /\bgit\s+(push|reset\s+--hard|clean)\b/i,
-    reason: 'sends data out or discards work',
-  },
-];
-
-/** Why a Start/Stop command can't be saved by the Assistant, or null if it looks acceptable. */
-export function dangerousCommandReason(command: string): string | null {
-  for (const { pattern, reason } of DANGEROUS_COMMAND) {
-    if (pattern.test(command)) return reason;
-  }
-  return null;
-}
+// The blocklist itself lives in shared/commandRisk.ts so the command board can use it too.
+export { dangerousCommandReason } from '../../shared/commandRisk';

@@ -52,6 +52,7 @@ export type {
 
 import type { DashboardMount, Mount, MountTemplateInfo } from './mountSchema';
 import type { AgentApi } from './agentTypes';
+import type { CommandsApi } from './commandSchema';
 
 export type { AgentApi, AgentEvent } from './agentTypes';
 
@@ -170,4 +171,6 @@ export interface HardpointApi {
   removeMcpConfigFile: (file: string) => Promise<ActionResult>;
   /** In-app assistant. Only present in the desktop window (not the HTTP embed). */
   agent?: AgentApi;
+  /** Command board. Desktop window only: never on the HTTP API, never offered to the assistant. */
+  commands?: CommandsApi;
 }
