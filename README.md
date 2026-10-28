@@ -24,12 +24,18 @@ The floating **Assistant** button (desktop window only) opens a chat where you s
 - **Approvals:** saving a mount shows you what will run (Start/Stop commands, status check, Open URL) and asks once; after you approve, it can start/stop that mount without asking again. Deleting a mount, or fetching a page outside well-known doc hosts (GitHub, Hugging Face, PyPI, npm, Read the Docs), also asks.
 - The only command that ever runs is a mount's Start/Stop command. Commands that delete files, change system settings, ask for admin rights, push to git, or download-and-run code are refused when it saves a mount.
 
+## Loopback API
+
+`127.0.0.1:3921` answers only loopback Host headers (no DNS rebinding), and anything that changes state must come from a program with no browser Origin (Node, Python, Electron main) or from a page served from loopback. Websites and `null`-origin frames are refused, so a page you visit can't save or start a mount.
+
 ## Development
 
 ```
 npm install
 npm run generate-icons   # after changing assets/logo.png
 npm run dev
+npm test                 # vitest
+npm run typecheck
 ```
 
 The renderer dev server runs on port **5174** (Vite). The main process serves `http://127.0.0.1:3921/api/status` for local embeds (RolePlaymate / KVGenius). `GET /` redirects to the Vite UI in development and serves the packaged renderer when installed.

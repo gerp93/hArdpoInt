@@ -11,7 +11,8 @@
     "build": "npm run build:renderer && npm run build:electron",
     "build:renderer": "vite build",
     "build:electron": "tsc -p tsconfig.main.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.main.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.main.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "vitest run",
     "package": "electron-builder",
     "generate-icons": "node scripts/generate-icons.js"
   },
@@ -35,6 +36,7 @@
     "sharp": "^0.35.4",
     "typescript": "^5.3.3",
     "vite": "^5.0.8",
+    "vitest": "^2.1.9",
     "wait-on": "^7.2.0"
   },
   "dependencies": {

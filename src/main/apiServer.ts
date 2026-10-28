@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as http from 'http';
 import * as path from 'path';
 import { app } from 'electron';
+import { guardRequest } from './apiGuard';
 import { buildDashboardStatus } from './statusSnapshot';
 import { clearCommandLog } from './commandLog';
 import { killActiveGpuProcess } from './gpu';
@@ -120,6 +121,17 @@ export function startApiServer(handlers?: ApiHandlers): void {
     }
 
     const origin = req.headers.origin;
+    const guard = guardRequest({
+      method: req.method,
+      host: req.headers.host,
+      origin: typeof origin === 'string' ? origin : undefined,
+      port: API_PORT,
+    });
+    if (!guard.ok) {
+      res.writeHead(guard.status, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end(guard.message);
+      return;
+    }
     const cors = corsHeaders(typeof origin === 'string' ? origin : undefined);
 
     if (req.method === 'OPTIONS') {
