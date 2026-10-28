@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { CommandEvent } from '../shared/commandSchema';
 import type { AgentEvent, HardpointApi, Mount } from '../shared/types';
 
 const hardpoint: HardpointApi = {
@@ -20,6 +21,22 @@ const hardpoint: HardpointApi = {
   stopMcpServer: (pid: number) => ipcRenderer.invoke('hardpoint:stopMcpServer', pid),
   addMcpConfigFile: () => ipcRenderer.invoke('hardpoint:addMcpConfigFile'),
   removeMcpConfigFile: (file: string) => ipcRenderer.invoke('hardpoint:removeMcpConfigFile', file),
+  commands: {
+    list: () => ipcRenderer.invoke('commands:list'),
+    save: (command) => ipcRenderer.invoke('commands:save', command),
+    delete: (id) => ipcRenderer.invoke('commands:delete', id),
+    saveHost: (host) => ipcRenderer.invoke('commands:saveHost', host),
+    deleteHost: (id) => ipcRenderer.invoke('commands:deleteHost', id),
+    run: (id) => ipcRenderer.invoke('commands:run', id),
+    cancel: (runId) => ipcRenderer.invoke('commands:cancel', runId),
+    testHost: (hostId) => ipcRenderer.invoke('commands:testHost', hostId),
+    clearRun: (id) => ipcRenderer.invoke('commands:clearRun', id),
+    onEvent: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, payload: CommandEvent) => listener(payload);
+      ipcRenderer.on('commands:event', handler);
+      return () => ipcRenderer.removeListener('commands:event', handler);
+    },
+  },
   agent: {
     send: (text) => ipcRenderer.invoke('agent:send', text),
     interrupt: () => ipcRenderer.invoke('agent:interrupt'),

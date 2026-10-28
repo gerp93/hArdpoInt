@@ -15,6 +15,8 @@ import {
 import { getEmbedOptions } from '../utils/themes';
 import { McpPanel } from '../components/McpPanel';
 import { ServicesPanel } from '../components/ServicesPanel';
+import { CommandsPanel } from '../components/CommandsPanel';
+import { getCommandsApi, useFailedCommandCount } from '../utils/commandView';
 
 const POLL_MS = 3000;
 
@@ -121,7 +123,7 @@ function GpuProcessTabs({
   );
 }
 
-type DashTab = 'dashboard' | 'log' | 'updates';
+type DashTab = 'dashboard' | 'commands' | 'log' | 'updates';
 
 type UpdateUiStatus = 'idle' | 'checking' | UpdateCheckResult['status'];
 
@@ -250,8 +252,21 @@ export function Dashboard() {
   const logCount = status?.commandLog.length ?? 0;
   const logFailed = (status?.commandLog ?? []).some((e) => !e.ok);
   const updateAvailable = updateStatus === 'available';
+  const commandsApi = embedded ? undefined : getCommandsApi();
+  const failedCommands = useFailedCommandCount();
   const tabs: { id: DashTab; label: string; badge?: string; alert?: boolean }[] = [
     { id: 'dashboard', label: 'Dashboard' },
+    // Saved commands run only from the desktop window, so the embed never shows them.
+    ...(commandsApi
+      ? [
+          {
+            id: 'commands' as const,
+            label: 'Commands',
+            badge: failedCommands > 0 ? String(failedCommands) : undefined,
+            alert: failedCommands > 0,
+          },
+        ]
+      : []),
     {
       id: 'log',
       label: 'Command log',
@@ -432,6 +447,8 @@ export function Dashboard() {
           </div>
         </div>
       )}
+
+      {tab === 'commands' && commandsApi && <CommandsPanel api={commandsApi} />}
 
       {tab === 'log' && (
         <section className="card card-fill">

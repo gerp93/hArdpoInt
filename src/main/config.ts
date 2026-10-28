@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
 import type { Mount } from '../shared/mountSchema';
+import type { SavedCommand, SshHost } from '../shared/commandSchema';
 import { migrateLegacyService, normalizeMount } from '../shared/mountSchema';
 
 export interface AppConfig {
@@ -19,6 +20,9 @@ export interface AppConfig {
   agentWorkspace?: string;
   /** Extra config files (besides known apps') to read MCP server lists from. */
   mcpConfigFiles?: string[];
+  /** Command board: saved commands and the SSH hosts they can run on. */
+  commands?: SavedCommand[];
+  sshHosts?: SshHost[];
 }
 
 function getConfigPath(): string {
@@ -42,14 +46,25 @@ export function readConfig(): AppConfig {
   const configPath = getConfigPath();
   if (!fs.existsSync(configPath)) return {};
   try {
-    return JSON.parse(fs.readFileSync(configPath, 'utf-8').replace(/^\uFEFF/, '')) as AppConfig;
+    return JSON.parse(fs.readFileSync(configPath, 'utf-8').replace(/^﻿/, '')) as AppConfig;
   } catch {
+    // An unreadable file reads as empty, and the next write would replace it. Keep a copy first.
+    try {
+      const backup = `${configPath}.corrupt`;
+      if (!fs.existsSync(backup)) fs.copyFileSync(configPath, backup);
+    } catch {
+      /* best effort */
+    }
     return {};
   }
 }
 
+/** Write via a temp file and rename, so a crash mid-write can't leave half a config. */
 export function writeConfig(config: AppConfig): void {
-  fs.writeFileSync(getConfigPath(), JSON.stringify(config, null, 2));
+  const configPath = getConfigPath();
+  const tmp = `${configPath}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(config, null, 2));
+  fs.renameSync(tmp, configPath);
 }
 
 /** Load mounts from config, migrating legacy `services` once. */

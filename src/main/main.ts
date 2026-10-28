@@ -15,6 +15,9 @@ import {
   saveMount,
 } from './services';
 import { scanLocalhostServices } from './scan';
+import { registerCommandIpc } from './commands/ipc';
+import type { CommandRunner } from './commands/runner';
+import { isTrustedRendererUrl } from './commands/trust';
 import { AgentSession } from './agent/session';
 import { addMcpConfigFile, removeMcpConfigFile, scanMcpServers, stopMcpServer } from './mcpServers';
 import { readConfig, writeConfig } from './config';
@@ -30,6 +33,7 @@ let mainWindow: BrowserWindow | null = null;
 /** Set once the updater has seen a newer version; the embed shows a notice for it. */
 let pendingUpdateVersion: string | null = null;
 let agent: AgentSession | null = null;
+let commandRunner: CommandRunner | null = null;
 
 function getAgent(): AgentSession {
   if (!agent) {
@@ -63,6 +67,13 @@ function createWindow(): void {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http://') || url.startsWith('https://')) void shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  // The window can run saved commands, so it must never show anything but Hardpoint's own page.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (isTrustedRendererUrl(url, app.isPackaged)) return;
+    event.preventDefault();
+    if (url.startsWith('http://') || url.startsWith('https://')) void shell.openExternal(url);
   });
 
   attachContextMenu(mainWindow);
@@ -348,6 +359,7 @@ function showMainWindow(): void {
 app.whenReady().then(() => {
   buildMenu();
   registerIpc();
+  commandRunner = registerCommandIpc(() => (mainWindow && !mainWindow.isDestroyed() ? mainWindow : null));
   startApiServer({ showWindow: showMainWindow, getPendingUpdate: () => pendingUpdateVersion });
   createWindow();
   setupAutoUpdater();
@@ -363,5 +375,6 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   agent?.dispose();
+  commandRunner?.cancelAll();
   stopApiServer();
 });
